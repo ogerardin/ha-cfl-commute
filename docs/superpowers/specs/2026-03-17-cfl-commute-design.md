@@ -130,7 +130,7 @@ GET /departureBoard?accessId=<API_KEY>&id=<STATION_ID>&lang=<en|fr>&format=json
 - **Attributes**:
   - `departure_time`, `scheduled_departure`, `expected_departure`
   - `platform`, `platform_changed`, `previous_platform`
-  - `operator` (CFL, THELLY, TRAM, etc.)
+  - `operator` (CFL)
   - `delay_minutes`, `is_cancelled`
   - `calling_points` - List of stops
   - `delay_reason`, `cancellation_reason`
@@ -231,7 +231,7 @@ User Config → Config Flow → Station Search (API) → Store Config
 |--------|----------------------|--------------------------|
 | API | National Rail Darwin | API mobiliteit.lu (ATP) |
 | Station Codes | 3-letter CRS | Numeric IDs |
-| Operators | UK train companies | CFL, THELLY, TRAM |
+| Operators | UK train companies | CFL |
 | API Key | Required (Rail Data Marketplace) | Required (ATP) |
 | Coverage | UK only | Luxembourg + connected networks |
 
