@@ -247,11 +247,7 @@ automation:
 
 ## API Information
 
-This integration uses the mobiliteit.lu API:
-
-- **Provider**: CFL (Chemins de Fer Luxembourgeois)
-- **API**: HAFAS OpenData API
-- **Format**: REST/JSON
+This integration uses the [mobiliteit.lu HAFAS API](https://data.public.lu/en/datasets/api-mobiliteit-lu/). See [README.md](README.md) for details.
 
 ## Fork
 
