@@ -37,3 +37,17 @@ Get a free API key by emailing: `opendata-api@atp.etat.lu`
 ## Support
 
 Issues: https://github.com/olivier/hacs-cfl-commute/issues
+
+## Running Tests
+
+### Unit tests (no API key required):
+```bash
+pip install pytest pytest-asyncio aiohttp homeassistant voluptuous
+pytest tests/ -v -m "not integration"
+```
+
+### Integration tests (requires API key):
+```bash
+export CFL_API_KEY=your_key_here
+pytest tests/test_integration.py -v
+```
