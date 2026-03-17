@@ -183,15 +183,37 @@ class CFLCommuteBaseSensor(SensorEntity):
     async def async_update(self) -> None:
         """Update sensor data."""
         try:
+            _LOGGER.debug(
+                "Fetching departures for station %s (time_window=%s min)",
+                self._origin_id,
+                self._time_window,
+            )
+            _LOGGER.debug(
+                "Filtering for destination containing: '%s'", self._destination_name
+            )
+
             departures = await self._client.get_departures(
                 self._origin_id, time_window=self._time_window
             )
+
+            _LOGGER.debug("API returned %d departures", len(departures))
+
+            for i, d in enumerate(departures):
+                _LOGGER.debug(
+                    "Departure %d: direction='%s', line='%s', time='%s'",
+                    i,
+                    d.direction,
+                    d.line,
+                    d.scheduled_departure,
+                )
 
             self._departures = [
                 d
                 for d in departures
                 if self._destination_name.lower() in d.direction.lower()
             ][: self._num_services]
+
+            _LOGGER.debug("%d departures matched filter", len(self._departures))
 
             self._available = True
         except Exception as e:
