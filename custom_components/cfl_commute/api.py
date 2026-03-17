@@ -43,6 +43,13 @@ class CFLCommuteClient:
         """Initialize the client."""
         self._api_key = api_key
 
+    async def _request(self, url: str, params: dict = None) -> dict:
+        """Make an API request."""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                response.raise_for_status()
+                return await response.json()
+
     async def search_stations(self, query: str) -> list[Station]:
         """Search for stations by name."""
         url = f"{self.BASE_URL}/location.nearbystops"
@@ -55,10 +62,7 @@ class CFLCommuteClient:
             "format": "json",
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                response.raise_for_status()
-                data = await response.json()
+        data = await self._request(url, params)
 
         stations = []
         location_list = data.get("LocationList", {})
@@ -92,10 +96,7 @@ class CFLCommuteClient:
             "format": "json",
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                response.raise_for_status()
-                data = await response.json()
+        data = await self._request(url, params)
 
         departures = []
         departure_list = data.get("Departure", [])

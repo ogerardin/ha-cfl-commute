@@ -43,9 +43,7 @@ class TestCFLCommuteClient:
             }
         }
 
-        with patch.object(
-            client, "_make_request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             stations = await client.search_stations("Luxembourg")
 
@@ -84,9 +82,7 @@ class TestCFLCommuteClient:
             ]
         }
 
-        with patch.object(
-            client, "_make_request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             departures = await client.get_departures("200426002")
 

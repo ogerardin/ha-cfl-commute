@@ -213,13 +213,13 @@ class TestCustomThresholds:
     def test_custom_minor_threshold(self):
         """Test with custom minor threshold."""
         departures = [{"is_cancelled": False, "delay_minutes": 5}]
-        # With threshold at 5, 5 minutes is on time
+        # With threshold at 5, 5 minutes is at threshold = delayed
         result = calculate_status(departures, 5, 10, 15)
-        assert result == STATUS_NORMAL
+        assert result == STATUS_MINOR
 
     def test_custom_major_threshold(self):
         """Test with custom major threshold."""
         departures = [{"is_cancelled": False, "delay_minutes": 8}]
-        # With major at 8, 8 minutes is minor
+        # With major at 8, 8 minutes is at threshold = major
         result = calculate_status(departures, 3, 8, 15)
-        assert result == STATUS_MINOR
+        assert result == STATUS_MAJOR

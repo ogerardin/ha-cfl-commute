@@ -10,7 +10,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
-    SchemaOptionsFlow,
+    SchemaOptionsFlowHandler,
 )
 from .api import CFLCommuteClient
 from .const import (
@@ -37,6 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 OPTIONS_SCHEMA = vol.Schema(
     {
+        vol.Optional(CONF_COMMUTE_NAME): str,
         vol.Required(CONF_TIME_WINDOW, default=DEFAULT_TIME_WINDOW): vol.All(
             vol.Coerce(int), vol.Range(min=15, max=120)
         ),
@@ -295,7 +296,7 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return CFLCommuteOptionsFlow(config_entry)
 
 
-class CFLCommuteOptionsFlow(SchemaOptionsFlow):
+class CFLCommuteOptionsFlow(SchemaOptionsFlowHandler):
     """Options flow for CFL Commute."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry):
