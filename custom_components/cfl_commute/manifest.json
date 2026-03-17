@@ -1,7 +1,7 @@
 {
   "domain": "cfl_commute",
   "name": "CFL Commute",
-  "codeowners": ["@olivier"],
+  "codeowners": ["@ogerardin"],
   "config_flow": true,
   "documentation": "https://github.com/ogerardin/hacs-cfl-commute",
   "iot_class": "cloud_polling",
