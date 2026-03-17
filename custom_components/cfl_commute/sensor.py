@@ -1,15 +1,14 @@
 """Sensor entities for CFL Commute."""
 
-from datetime import datetime
 from typing import Any
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.const import CONF_NAME
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, StateType
-from .api import CFLCommuteClient, Departure
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .api import Departure
 from .const import (
-    CONF_API_KEY,
     CONF_COMMUTE_NAME,
     CONF_DESTINATION,
     CONF_MAJOR_THRESHOLD,
@@ -18,6 +17,7 @@ from .const import (
     CONF_ORIGIN,
     CONF_SEVERE_THRESHOLD,
     CONF_TIME_WINDOW,
+    DOMAIN,
     STATUS_CRITICAL,
     STATUS_MAJOR,
     STATUS_MINOR,
@@ -27,10 +27,8 @@ from .const import (
     TRAIN_DELAYED,
     TRAIN_NO_SERVICE,
     TRAIN_ON_TIME,
-    UPDATE_INTERVAL_NIGHT,
-    UPDATE_INTERVAL_OFFPEAK,
-    UPDATE_INTERVAL_PEAK,
 )
+from .coordinator import CFLCommuteDataUpdateCoordinator
 
 import logging
 
@@ -43,13 +41,13 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the CFL Commute sensors."""
-    api_key = config_entry.data.get(CONF_API_KEY, "")
-    client = CFLCommuteClient(api_key)
+    # Get coordinator from hass.data
+    entry_data = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = entry_data["coordinator"]
 
     commute_name = config_entry.data.get(CONF_COMMUTE_NAME, "cfl_commute")
     origin = config_entry.data.get(CONF_ORIGIN, {})
     destination = config_entry.data.get(CONF_DESTINATION, {})
-    time_window = config_entry.data.get(CONF_TIME_WINDOW, 60)
     num_services = config_entry.data.get(CONF_NUM_SERVICES, 3)
     minor_threshold = config_entry.data.get(CONF_MINOR_THRESHOLD, 3)
     major_threshold = config_entry.data.get(CONF_MAJOR_THRESHOLD, 10)
@@ -57,39 +55,30 @@ async def async_setup_entry(
 
     sensors = [
         CFLCommuteSummarySensor(
-            hass=hass,
-            config_entry=config_entry,
-            client=client,
+            coordinator=coordinator,
             commute_name=commute_name,
             origin=origin,
             destination=destination,
-            time_window=time_window,
             num_services=num_services,
             minor_threshold=minor_threshold,
             major_threshold=major_threshold,
             severe_threshold=severe_threshold,
         ),
         CFLCommuteStatusSensor(
-            hass=hass,
-            config_entry=config_entry,
-            client=client,
+            coordinator=coordinator,
             commute_name=commute_name,
             origin=origin,
             destination=destination,
-            time_window=time_window,
             num_services=num_services,
             minor_threshold=minor_threshold,
             major_threshold=major_threshold,
             severe_threshold=severe_threshold,
         ),
         CFLCommuteNextTrainSensor(
-            hass=hass,
-            config_entry=config_entry,
-            client=client,
+            coordinator=coordinator,
             commute_name=commute_name,
             origin=origin,
             destination=destination,
-            time_window=time_window,
             num_services=num_services,
             minor_threshold=minor_threshold,
             major_threshold=major_threshold,
@@ -100,13 +89,10 @@ async def async_setup_entry(
     for i in range(1, num_services + 1):
         sensors.append(
             CFLCommuteTrainSensor(
-                hass=hass,
-                config_entry=config_entry,
-                client=client,
+                coordinator=coordinator,
                 commute_name=commute_name,
                 origin=origin,
                 destination=destination,
-                time_window=time_window,
                 num_services=num_services,
                 minor_threshold=minor_threshold,
                 major_threshold=major_threshold,
@@ -118,57 +104,36 @@ async def async_setup_entry(
     async_add_entities(sensors)
 
 
-def _get_update_interval(hass: HomeAssistant) -> int:
-    """Determine update interval based on time of day."""
-    now = datetime.now()
-    hour = now.hour
-
-    if 6 <= hour < 10 or 16 <= hour < 20:
-        return UPDATE_INTERVAL_PEAK
-    elif 23 <= hour or hour < 5:
-        return UPDATE_INTERVAL_NIGHT
-    else:
-        return UPDATE_INTERVAL_OFFPEAK
-
-
-class CFLCommuteBaseSensor(SensorEntity):
+class CFLCommuteBaseSensor(CoordinatorEntity, SensorEntity):
     """Base sensor for CFL Commute."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
-        config_entry: ConfigType,
-        client: CFLCommuteClient,
+        coordinator: CFLCommuteDataUpdateCoordinator,
         commute_name: str,
         origin: dict,
         destination: dict,
-        time_window: int,
         num_services: int,
         minor_threshold: int,
         major_threshold: int,
         severe_threshold: int,
     ):
         """Initialize the sensor."""
-        self._hass = hass
-        self._config_entry = config_entry
-        self._client = client
+        super().__init__(coordinator)
         self._commute_name = commute_name
-        self._origin_id = origin.get("id", "")
         self._origin_name = origin.get("name", "")
-        self._destination_id = destination.get("id", "")
         self._destination_name = destination.get("name", "")
-        self._time_window = time_window
+        self._origin_id = origin.get("id", "")
+        self._destination_id = destination.get("id", "")
         self._num_services = num_services
         self._minor_threshold = minor_threshold
         self._major_threshold = major_threshold
         self._severe_threshold = severe_threshold
-        self._departures: list[Departure] = []
-        self._available = True
 
     @property
-    def available(self) -> bool:
-        """Return if sensor is available."""
-        return self._available
+    def departures(self) -> list[Departure]:
+        """Return departures from coordinator data."""
+        return self.coordinator.data if self.coordinator.data else []
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -179,62 +144,6 @@ class CFLCommuteBaseSensor(SensorEntity):
             "origin_id": self._origin_id,
             "destination_id": self._destination_id,
         }
-
-    async def async_update(self) -> None:
-        """Update sensor data."""
-        try:
-            _LOGGER.debug(
-                "Fetching departures for station %s (time_window=%s min)",
-                self._origin_id,
-                self._time_window,
-            )
-            _LOGGER.debug(
-                "Filtering for destination containing: '%s'", self._destination_name
-            )
-
-            departures = await self._client.get_departures(
-                self._origin_id, time_window=self._time_window
-            )
-
-            _LOGGER.debug("API returned %d departures", len(departures))
-
-            for i, d in enumerate(departures):
-                _LOGGER.debug(
-                    "Departure %d: direction='%s', line='%s', time='%s'",
-                    i,
-                    d.direction,
-                    d.line,
-                    d.scheduled_departure,
-                )
-
-            # Filter departures - check if destination is in the journey's stops
-            filtered_departures = []
-            for d in departures:
-                _LOGGER.debug(
-                    "Checking departure %s to %s (stops: %s)",
-                    d.train_number,
-                    d.direction,
-                    d.stop_ids,
-                )
-
-                # Check if destination ID is in the journey's stops
-                if self._destination_id in d.stop_ids:
-                    _LOGGER.debug(
-                        "Departure %s passes through %s (ID: %s)",
-                        d.train_number,
-                        self._destination_name,
-                        self._destination_id,
-                    )
-                    filtered_departures.append(d)
-
-            self._departures = filtered_departures[: self._num_services]
-
-            _LOGGER.debug("%d departures matched filter", len(self._departures))
-
-            self._available = True
-        except Exception as e:
-            _LOGGER.error(f"Failed to update departures: {e}")
-            self._available = False
 
 
 class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
@@ -253,20 +162,20 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
     @property
     def state(self) -> StateType:
         """Return the state of the sensor."""
-        if not self._departures:
+        if not self.departures:
             return "No trains"
 
         on_time = sum(
             1
-            for d in self._departures
+            for d in self.departures
             if not d.is_cancelled and d.delay_minutes < self._minor_threshold
         )
         delayed = sum(
             1
-            for d in self._departures
+            for d in self.departures
             if not d.is_cancelled and d.delay_minutes >= self._minor_threshold
         )
-        cancelled = sum(1 for d in self._departures if d.is_cancelled)
+        cancelled = sum(1 for d in self.departures if d.is_cancelled)
 
         parts = []
         if on_time:
@@ -285,22 +194,22 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
 
         on_time = sum(
             1
-            for d in self._departures
+            for d in self.departures
             if not d.is_cancelled and d.delay_minutes < self._minor_threshold
         )
         delayed = sum(
             1
-            for d in self._departures
+            for d in self.departures
             if not d.is_cancelled and d.delay_minutes >= self._minor_threshold
         )
-        cancelled = sum(1 for d in self._departures if d.is_cancelled)
+        cancelled = sum(1 for d in self.departures if d.is_cancelled)
 
         attrs.update(
             {
                 "on_time_count": on_time,
                 "delayed_count": delayed,
                 "cancelled_count": cancelled,
-                "total_trains": len(self._departures),
+                "total_trains": len(self.departures),
                 "all_trains": [
                     {
                         "departure_time": d.expected_departure,
@@ -310,7 +219,7 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
                         "platform": d.platform,
                         "direction": d.direction,
                     }
-                    for d in self._departures
+                    for d in self.departures
                 ],
             }
         )
@@ -331,13 +240,13 @@ class CFLCommuteStatusSensor(CFLCommuteBaseSensor):
 
     @property
     def state(self) -> StateType:
-        if not self._departures:
+        if not self.departures:
             return STATUS_NORMAL
 
-        if any(d.is_cancelled for d in self._departures):
+        if any(d.is_cancelled for d in self.departures):
             return STATUS_CRITICAL
 
-        max_delay = max((d.delay_minutes for d in self._departures), default=0)
+        max_delay = max((d.delay_minutes for d in self.departures), default=0)
 
         if max_delay >= self._severe_threshold:
             return STATUS_SEVERE
@@ -365,22 +274,22 @@ class CFLCommuteStatusSensor(CFLCommuteBaseSensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         attrs = super().extra_state_attributes
 
-        cancelled = sum(1 for d in self._departures if d.is_cancelled)
+        cancelled = sum(1 for d in self.departures if d.is_cancelled)
         delayed = sum(
             1
-            for d in self._departures
+            for d in self.departures
             if not d.is_cancelled and d.delay_minutes >= self._minor_threshold
         )
-        max_delay = max((d.delay_minutes for d in self._departures), default=0)
+        max_delay = max((d.delay_minutes for d in self.departures), default=0)
 
         attrs.update(
             {
-                "total_trains": len(self._departures),
-                "on_time_count": len(self._departures) - cancelled - delayed,
+                "total_trains": len(self.departures),
+                "on_time_count": len(self.departures) - cancelled - delayed,
                 "minor_delays_count": delayed,
                 "major_delays_count": sum(
                     1
-                    for d in self._departures
+                    for d in self.departures
                     if not d.is_cancelled and d.delay_minutes >= self._major_threshold
                 ),
                 "cancelled_count": cancelled,
@@ -404,10 +313,10 @@ class CFLCommuteNextTrainSensor(CFLCommuteBaseSensor):
 
     @property
     def state(self) -> StateType:
-        if not self._departures:
+        if not self.departures:
             return TRAIN_NO_SERVICE
 
-        train = self._departures[0]
+        train = self.departures[0]
         if train.is_cancelled:
             return TRAIN_CANCELLED
         elif train.delay_minutes > 0:
@@ -427,12 +336,12 @@ class CFLCommuteNextTrainSensor(CFLCommuteBaseSensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         attrs = super().extra_state_attributes
 
-        if self._departures:
-            train = self._departures[0]
+        if self.departures:
+            train = self.departures[0]
             attrs.update(
                 {
                     "train_number": 1,
-                    "total_trains": len(self._departures),
+                    "total_trains": len(self.departures),
                     "departure_time": train.expected_departure,
                     "scheduled_departure": train.scheduled_departure,
                     "expected_departure": train.expected_departure,
@@ -467,10 +376,10 @@ class CFLCommuteTrainSensor(CFLCommuteBaseSensor):
 
     @property
     def state(self) -> StateType:
-        if len(self._departures) < self._train_number:
+        if len(self.departures) < self._train_number:
             return TRAIN_NO_SERVICE
 
-        train = self._departures[self._train_number - 1]
+        train = self.departures[self._train_number - 1]
         if train.is_cancelled:
             return TRAIN_CANCELLED
         elif train.delay_minutes > 0:
@@ -492,12 +401,12 @@ class CFLCommuteTrainSensor(CFLCommuteBaseSensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         attrs = super().extra_state_attributes
 
-        if len(self._departures) >= self._train_number:
-            train = self._departures[self._train_number - 1]
+        if len(self.departures) >= self._train_number:
+            train = self.departures[self._train_number - 1]
             attrs.update(
                 {
                     "train_number": self._train_number,
-                    "total_trains": len(self._departures),
+                    "total_trains": len(self.departures),
                     "departure_time": train.expected_departure,
                     "scheduled_departure": train.scheduled_departure,
                     "expected_departure": train.expected_departure,

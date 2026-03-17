@@ -39,3 +39,7 @@ TRAIN_NO_SERVICE = "No service"
 UPDATE_INTERVAL_PEAK = 120
 UPDATE_INTERVAL_OFFPEAK = 300
 UPDATE_INTERVAL_NIGHT = 900
+
+# Smart interval configuration
+PEAK_HOURS = [(6, 10), (16, 20)]  # 6-10am, 4-8pm
+NIGHT_HOURS = (23, 5)  # 11pm-5am

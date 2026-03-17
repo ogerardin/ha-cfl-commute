@@ -2,13 +2,12 @@
 
 from typing import Any
 from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, StateType
-from .api import CFLCommuteClient
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
 from .const import (
-    CONF_API_KEY,
     CONF_COMMUTE_NAME,
     CONF_DESTINATION,
     CONF_MAJOR_THRESHOLD,
@@ -16,15 +15,14 @@ from .const import (
     CONF_NUM_SERVICES,
     CONF_ORIGIN,
     CONF_SEVERE_THRESHOLD,
-    CONF_TIME_WINDOW,
+    DOMAIN,
     STATUS_CRITICAL,
     STATUS_MAJOR,
     STATUS_MINOR,
     STATUS_NORMAL,
     STATUS_SEVERE,
 )
-
-from .sensor import CFLCommuteBaseSensor
+from .coordinator import CFLCommuteDataUpdateCoordinator
 
 
 async def async_setup_entry(
@@ -33,26 +31,23 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the CFL Commute binary sensor."""
-    api_key = config_entry.data.get(CONF_API_KEY, "")
-    client = CFLCommuteClient(api_key)
+    # Get coordinator from hass.data
+    entry_data = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = entry_data["coordinator"]
 
     commute_name = config_entry.data.get(CONF_COMMUTE_NAME, "cfl_commute")
     origin = config_entry.data.get(CONF_ORIGIN, {})
     destination = config_entry.data.get(CONF_DESTINATION, {})
-    time_window = config_entry.data.get(CONF_TIME_WINDOW, 60)
     num_services = config_entry.data.get(CONF_NUM_SERVICES, 3)
     minor_threshold = config_entry.data.get(CONF_MINOR_THRESHOLD, 3)
     major_threshold = config_entry.data.get(CONF_MAJOR_THRESHOLD, 10)
     severe_threshold = config_entry.data.get(CONF_SEVERE_THRESHOLD, 15)
 
     sensor = CFLCommuteDisruptionSensor(
-        hass=hass,
-        config_entry=config_entry,
-        client=client,
+        coordinator=coordinator,
         commute_name=commute_name,
         origin=origin,
         destination=destination,
-        time_window=time_window,
         num_services=num_services,
         minor_threshold=minor_threshold,
         major_threshold=major_threshold,
@@ -62,8 +57,31 @@ async def async_setup_entry(
     async_add_entities([sensor])
 
 
-class CFLCommuteDisruptionSensor(CFLCommuteBaseSensor, BinarySensorEntity):
+class CFLCommuteDisruptionSensor(CoordinatorEntity, BinarySensorEntity):
     """Binary sensor for disruption detection."""
+
+    def __init__(
+        self,
+        coordinator: CFLCommuteDataUpdateCoordinator,
+        commute_name: str,
+        origin: dict,
+        destination: dict,
+        num_services: int,
+        minor_threshold: int,
+        major_threshold: int,
+        severe_threshold: int,
+    ):
+        """Initialize the binary sensor."""
+        super().__init__(coordinator)
+        self._commute_name = commute_name
+        self._origin_name = origin.get("name", "")
+        self._destination_name = destination.get("name", "")
+        self._origin_id = origin.get("id", "")
+        self._destination_id = destination.get("id", "")
+        self._num_services = num_services
+        self._minor_threshold = minor_threshold
+        self._major_threshold = major_threshold
+        self._severe_threshold = severe_threshold
 
     @property
     def name(self) -> str:
@@ -90,13 +108,15 @@ class CFLCommuteDisruptionSensor(CFLCommuteBaseSensor, BinarySensorEntity):
 
     def _get_status(self) -> str:
         """Get the current status."""
-        if not self._departures:
+        departures = self.coordinator.data if self.coordinator.data else []
+
+        if not departures:
             return STATUS_NORMAL
 
-        if any(d.is_cancelled for d in self._departures):
+        if any(d.is_cancelled for d in departures):
             return STATUS_CRITICAL
 
-        max_delay = max((d.delay_minutes for d in self._departures), default=0)
+        max_delay = max((d.delay_minutes for d in departures), default=0)
 
         if max_delay >= self._severe_threshold:
             return STATUS_SEVERE
@@ -109,15 +129,22 @@ class CFLCommuteDisruptionSensor(CFLCommuteBaseSensor, BinarySensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        attrs = super().extra_state_attributes
+        attrs = {
+            "origin": self._origin_name,
+            "destination": self._destination_name,
+            "origin_id": self._origin_id,
+            "destination_id": self._destination_id,
+        }
 
-        cancelled = sum(1 for d in self._departures if d.is_cancelled)
+        departures = self.coordinator.data if self.coordinator.data else []
+
+        cancelled = sum(1 for d in departures if d.is_cancelled)
         delayed = sum(
             1
-            for d in self._departures
+            for d in departures
             if not d.is_cancelled and d.delay_minutes >= self._minor_threshold
         )
-        max_delay = max((d.delay_minutes for d in self._departures), default=0)
+        max_delay = max((d.delay_minutes for d in departures), default=0)
 
         attrs.update(
             {
@@ -134,7 +161,9 @@ class CFLCommuteDisruptionSensor(CFLCommuteBaseSensor, BinarySensorEntity):
     def _get_disruption_reasons(self) -> list[str]:
         """Get list of disruption reasons."""
         reasons = []
-        for d in self._departures:
+        departures = self.coordinator.data if self.coordinator.data else []
+
+        for d in departures:
             if d.is_cancelled:
                 reasons.append(f"Cancelled: {d.direction}")
             elif d.delay_minutes >= self._minor_threshold:
