@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "CFL Commute",
+        "description": "Track your Luxembourg train commutes",
+        "data": {
+          "api_key": "API Key"
+        },
+        "data_description": {
+          "api_key": "Get your free API key from opendata-api@atp.etat.lu"
+        }
+      },
+      "origin": {
+        "title": "Select Origin Station",
+        "description": "Search for your origin station",
+        "data": {
+          "station_query": "Station name"
+        }
+      },
+      "destination": {
+        "title": "Select Destination Station",
+        "description": "Search for your destination station",
+        "data": {
+          "station_query": "Station name"
+        }
+      },
+      "settings": {
+        "title": "Commute Settings",
+        "data": {
+          "commute_name": "Commute Name",
+          "time_window": "Time Window (minutes)",
+          "num_services": "Number of Services",
+          "minor_threshold": "Minor Delays Threshold (min)",
+          "major_threshold": "Major Delays Threshold (min)",
+          "severe_threshold": "Severe Disruption Threshold (min)",
+          "night_updates": "Enable Night Updates"
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Invalid API key",
+      "station_search_failed": "Could not search stations",
+      "no_stations_found": "No stations found"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "cfl_commute": {
+        "name": "CFL Commute {name}",
+        "state_attributes": {
+          "origin": "Origin",
+          "destination": "Destination"
+        }
+      }
+    }
+  }
+}
