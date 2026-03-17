@@ -49,8 +49,12 @@
       "cfl_commute": {
         "name": "CFL Commute {name}",
         "state_attributes": {
-          "origin": "Origin",
-          "destination": "Destination"
+          "origin": {
+            "name": "Origin"
+          },
+          "destination": {
+            "name": "Destination"
+          }
         }
       }
     }

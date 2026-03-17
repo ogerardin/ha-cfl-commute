@@ -291,7 +291,7 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
-    ) -> SchemaOptionsFlow:
+    ) -> SchemaOptionsFlowHandler:
         """Get options flow."""
         return CFLCommuteOptionsFlow(config_entry)
 

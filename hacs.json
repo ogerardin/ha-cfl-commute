@@ -1,9 +1,6 @@
 {
   "name": "CFL Commute",
-  "description": "Track your Luxembourg CFL train commutes in Home Assistant",
-  "homeassistant": "2024.1.0",
-  "hacs": "1.0.0",
-  "render_template": {
-    "slug": "cfl_commute"
-  }
+  "country": "LU",
+  "render_readme": false,
+  "homeassistant": "2024.1.0"
 }
