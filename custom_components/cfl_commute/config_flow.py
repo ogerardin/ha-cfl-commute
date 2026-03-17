@@ -1,17 +1,12 @@
 """Config flow for CFL Commute."""
 
-import asyncio
 import logging
 from typing import Any, Optional
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
-from homeassistant.helpers.schema_config_entry_flow import (
-    SchemaFlowFormStep,
-    SchemaOptionsFlowHandler,
-)
 from .api import CFLCommuteClient
 from .const import (
     CONF_API_KEY,
@@ -34,28 +29,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-OPTIONS_SCHEMA = vol.Schema(
-    {
-        vol.Optional(CONF_COMMUTE_NAME): str,
-        vol.Required(CONF_TIME_WINDOW, default=DEFAULT_TIME_WINDOW): vol.All(
-            vol.Coerce(int), vol.Range(min=15, max=120)
-        ),
-        vol.Required(CONF_NUM_SERVICES, default=DEFAULT_NUM_SERVICES): vol.All(
-            vol.Coerce(int), vol.Range(min=1, max=10)
-        ),
-        vol.Required(CONF_MINOR_THRESHOLD, default=DEFAULT_MINOR_THRESHOLD): vol.All(
-            vol.Coerce(int), vol.Range(min=1, max=60)
-        ),
-        vol.Required(CONF_MAJOR_THRESHOLD, default=DEFAULT_MAJOR_THRESHOLD): vol.All(
-            vol.Coerce(int), vol.Range(min=1, max=60)
-        ),
-        vol.Required(CONF_SEVERE_THRESHOLD, default=DEFAULT_SEVERE_THRESHOLD): vol.All(
-            vol.Coerce(int), vol.Range(min=1, max=60)
-        ),
-        vol.Required(CONF_NIGHT_UPDATES, default=DEFAULT_NIGHT_UPDATES): bool,
-    }
-)
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -295,29 +268,129 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
-    ) -> SchemaOptionsFlowHandler:
+    ) -> config_entries.OptionsFlow:
         """Get options flow."""
-        return CFLCommuteOptionsFlow(config_entry)
+        return CFLCommuteOptionsFlow()
 
 
-class CFLCommuteOptionsFlow(SchemaOptionsFlowHandler):
+class CFLCommuteOptionsFlow(config_entries.OptionsFlow):
     """Options flow for CFL Commute."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry):
-        """Initialize options flow."""
-        self._config_entry = config_entry
-        super().__init__(config_entry, OPTIONS_SCHEMA)
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle options step."""
+        errors: dict[str, str] = {}
+
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        # Get current options from config entry
+        config_entry = self.hass.config_entries.async_get_entry(self.handler)
+        if config_entry is None:
+            return self.async_abort(reason="Config entry not found")
+
+        # Use options if available, otherwise fall back to data
+        current_options = (
+            dict(config_entry.options)
+            if config_entry.options
+            else dict(config_entry.data)
+        )
+
+        data_schema = vol.Schema(
+            {
+                vol.Optional(CONF_COMMUTE_NAME): str,
+                vol.Required(
+                    CONF_TIME_WINDOW,
+                    default=current_options.get(CONF_TIME_WINDOW, DEFAULT_TIME_WINDOW),
+                ): vol.All(vol.Coerce(int), vol.Range(min=15, max=120)),
+                vol.Required(
+                    CONF_NUM_SERVICES,
+                    default=current_options.get(
+                        CONF_NUM_SERVICES, DEFAULT_NUM_SERVICES
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
+                vol.Required(
+                    CONF_MINOR_THRESHOLD,
+                    default=current_options.get(
+                        CONF_MINOR_THRESHOLD, DEFAULT_MINOR_THRESHOLD
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                vol.Required(
+                    CONF_MAJOR_THRESHOLD,
+                    default=current_options.get(
+                        CONF_MAJOR_THRESHOLD, DEFAULT_MAJOR_THRESHOLD
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                vol.Required(
+                    CONF_SEVERE_THRESHOLD,
+                    default=current_options.get(
+                        CONF_SEVERE_THRESHOLD, DEFAULT_SEVERE_THRESHOLD
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                vol.Required(
+                    CONF_NIGHT_UPDATES,
+                    default=current_options.get(
+                        CONF_NIGHT_UPDATES, DEFAULT_NIGHT_UPDATES
+                    ),
+                ): bool,
+            }
+        )
+
         return self.async_show_form(
             step_id="init",
-            data_schema=self.add_suggested_values_to_schema(
-                OPTIONS_SCHEMA, self._config_entry.data
-            ),
+            data_schema=data_schema,
+            errors=errors,
+        )
+
+        data_schema = vol.Schema(
+            {
+                vol.Optional(CONF_COMMUTE_NAME): str,
+                vol.Required(
+                    CONF_TIME_WINDOW,
+                    default=current_options.get(CONF_TIME_WINDOW, DEFAULT_TIME_WINDOW),
+                ): vol.All(vol.Coerce(int), vol.Range(min=15, max=120)),
+                vol.Required(
+                    CONF_NUM_SERVICES,
+                    default=current_options.get(
+                        CONF_NUM_SERVICES, DEFAULT_NUM_SERVICES
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
+                vol.Required(
+                    CONF_MINOR_THRESHOLD,
+                    default=current_options.get(
+                        CONF_MINOR_THRESHOLD, DEFAULT_MINOR_THRESHOLD
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                vol.Required(
+                    CONF_MAJOR_THRESHOLD,
+                    default=current_options.get(
+                        CONF_MAJOR_THRESHOLD, DEFAULT_MAJOR_THRESHOLD
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                vol.Required(
+                    CONF_SEVERE_THRESHOLD,
+                    default=current_options.get(
+                        CONF_SEVERE_THRESHOLD, DEFAULT_SEVERE_THRESHOLD
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                vol.Required(
+                    CONF_NIGHT_UPDATES,
+                    default=current_options.get(
+                        CONF_NIGHT_UPDATES, DEFAULT_NIGHT_UPDATES
+                    ),
+                ): bool,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=data_schema,
+            errors=errors,
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=data_schema,
+            errors=errors,
         )
