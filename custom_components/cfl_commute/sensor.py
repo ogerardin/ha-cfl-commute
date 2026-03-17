@@ -207,40 +207,25 @@ class CFLCommuteBaseSensor(SensorEntity):
                     d.scheduled_departure,
                 )
 
-            # Filter departures - check both direction and calling points
+            # Filter departures - check if destination is in the journey's stops
             filtered_departures = []
             for d in departures:
-                # First check if direction matches
-                if self._destination_name.lower() in d.direction.lower():
+                _LOGGER.debug(
+                    "Checking departure %s to %s (stops: %s)",
+                    d.train_number,
+                    d.direction,
+                    d.stop_ids,
+                )
+
+                # Check if destination ID is in the journey's stops
+                if self._destination_id in d.stop_ids:
                     _LOGGER.debug(
-                        "Departure matched by direction: %s -> %s",
+                        "Departure %s passes through %s (ID: %s)",
                         d.train_number,
-                        d.direction,
+                        self._destination_name,
+                        self._destination_id,
                     )
                     filtered_departures.append(d)
-                    continue
-
-                # If no direction match, check calling points
-                if d.journey_ref:
-                    _LOGGER.debug(
-                        "Checking calling points for %s (ref: %s)",
-                        d.train_number,
-                        d.journey_ref,
-                    )
-                    calling_points = await self._client.get_journey_details(
-                        d.journey_ref
-                    )
-
-                    # Check if destination ID is in calling points
-                    for stop in calling_points:
-                        if stop.get("id") == self._destination_id:
-                            _LOGGER.debug(
-                                "Departure %s passes through %s",
-                                d.train_number,
-                                self._destination_name,
-                            )
-                            filtered_departures.append(d)
-                            break
 
             self._departures = filtered_departures[: self._num_services]
 

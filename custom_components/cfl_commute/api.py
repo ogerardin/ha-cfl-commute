@@ -33,6 +33,7 @@ class Departure:
     is_cancelled: bool
     delay_minutes: int
     calling_points: list
+    stop_ids: list
     journey_ref: str = ""
 
 
@@ -122,6 +123,7 @@ class CFLCommuteClient:
             "id": station_id,
             "lang": lang,
             "format": "json",
+            "passlist": "1",  # Include all stops for this journey
         }
 
         data = await self._request(url, params)
@@ -179,8 +181,21 @@ class CFLCommuteClient:
             # Get direction
             direction = dep.get("direction", "")
 
-            # Get journey reference for fetching calling points
-            journey_ref = dep.get("JourneyDetailRef", {}).get("ref", "")
+            # Get all stops for this journey (when passlist=1 is used)
+            stops = dep.get("Stops", {}).get("Stop", [])
+            if isinstance(stops, dict):
+                stops = [stops]
+
+            # Extract stop IDs from the journey
+            stop_ids = []
+            stop_names = []
+            for stop in stops:
+                stop_id = stop.get("extId", "")
+                stop_name = stop.get("name", "")
+                if stop_id:
+                    stop_ids.append(stop_id)
+                if stop_name:
+                    stop_names.append(stop_name)
 
             departures.append(
                 Departure(
@@ -194,8 +209,9 @@ class CFLCommuteClient:
                     train_number=dep.get("num", ""),
                     is_cancelled=is_cancelled,
                     delay_minutes=delay_minutes,
-                    calling_points=[],
-                    journey_ref=journey_ref,
+                    calling_points=stop_names,
+                    stop_ids=stop_ids,
+                    journey_ref="",
                 )
             )
 
