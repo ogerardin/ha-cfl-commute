@@ -2,6 +2,7 @@
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 import aiohttp
 
@@ -118,10 +119,8 @@ class CFLCommuteClient:
         station_id: str,
         lang: str = "en",
         time_window: int = 60,
-        date: str | None = None,
-        time: str | None = None,
     ) -> list[Departure]:
-        """Get departures for a station."""
+        """Get departures for a station, filtered by time window."""
         url = f"{self.BASE_URL}/departureBoard"
         params = {
             "accessId": self._api_key,
@@ -130,12 +129,6 @@ class CFLCommuteClient:
             "format": "json",
             "passlist": "1",  # Include all stops for this journey
         }
-
-        # Add date/time parameters if provided (format: DD.MM.YYYY, HH:MM)
-        if date:
-            params["date"] = date
-        if time:
-            params["time"] = time
 
         data = await self._request(url, params)
 
@@ -226,7 +219,41 @@ class CFLCommuteClient:
                 )
             )
 
+        # Filter by time window and return
+        departures = self._filter_by_time_window(departures, time_window)
         return departures[:10]
+
+    def _filter_by_time_window(
+        self, departures: list[Departure], time_window: int
+    ) -> list[Departure]:
+        """Filter departures by time window (minutes from now).
+
+        Handles midnight crossing (e.g., current 23:50, departure 00:10 = +20 min).
+        """
+        if time_window <= 0:
+            return departures
+
+        now = datetime.now()
+        now_minutes = now.hour * 60 + now.minute
+
+        filtered = []
+        for dep in departures:
+            try:
+                dep_time = datetime.strptime(dep.scheduled_departure, "%H:%M")
+                dep_minutes = dep_time.hour * 60 + dep_time.minute
+
+                # Calculate minutes from now, handling midnight crossing
+                diff = dep_minutes - now_minutes
+                if diff < -60:  # Past midnight (e.g., 23:50 -> 00:10 = +20 min)
+                    diff += 1440  # Add 24 hours in minutes
+
+                if 0 <= diff <= time_window:
+                    filtered.append(dep)
+            except (ValueError, TypeError):
+                # Keep departures where time parsing fails
+                filtered.append(dep)
+
+        return filtered
 
     async def get_journey_details(self, journey_ref: str) -> list[dict]:
         """Get journey details to find calling points.

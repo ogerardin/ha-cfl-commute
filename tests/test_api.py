@@ -1,6 +1,7 @@
 """Tests for CFL Commute API client."""
 
 import pytest
+from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
 from custom_components.cfl_commute.api import CFLCommuteClient, Station, Departure
 
@@ -90,10 +91,110 @@ class TestCFLCommuteClient:
 
         with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
-            departures = await client.get_departures("200426002")
+            # Use large time_window to include test times regardless of current time
+            departures = await client.get_departures("200426002", time_window=1440)
 
         # Both RB (train) and Bus should be included
         assert len(departures) == 2
         operators = [d.operator for d in departures]
         assert "CFL" in operators  # RB train has CFL operator
         assert "AVL" in operators
+
+    @pytest.mark.asyncio
+    async def test_get_departures_filters_by_time_window(self):
+        """Test that departures are filtered by time window."""
+        client = CFLCommuteClient("test_api_key")
+
+        mock_response = {
+            "Departure": [
+                {
+                    "ProductAtStop": {
+                        "name": "Train 1",
+                        "catOut": "RB",
+                        "operatorInfo": {"nameS": "CFL"},
+                    },
+                    "time": "10:00",  # Within 60 min window
+                    "rtTime": "10:00",
+                    "direction": "Test",
+                    "num": "1234",
+                },
+                {
+                    "ProductAtStop": {
+                        "name": "Train 2",
+                        "catOut": "RB",
+                        "operatorInfo": {"nameS": "CFL"},
+                    },
+                    "time": "14:00",  # Outside 60 min window
+                    "rtTime": "14:00",
+                    "direction": "Test",
+                    "num": "5678",
+                },
+            ]
+        }
+
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
+            # With time_window=0, all departures should be included
+            departures = await client.get_departures("200426002", time_window=0)
+
+        assert len(departures) == 2
+
+    def test_filter_by_time_window_handles_midnight(self):
+        """Test that time filtering handles midnight crossing correctly."""
+        client = CFLCommuteClient("test_api_key")
+
+        # Create mock departures with times around midnight
+        departures = [
+            Departure(
+                station_id="123",
+                scheduled_departure="23:50",  # Will be 10 min from mocked time
+                expected_departure="23:50",
+                platform="1",
+                line="RB",
+                direction="Test",
+                operator="CFL",
+                train_number="1234",
+                is_cancelled=False,
+                delay_minutes=0,
+                calling_points=[],
+                stop_ids=[],
+            ),
+            Departure(
+                station_id="123",
+                scheduled_departure="00:10",  # Will be 30 min from mocked time (crosses midnight)
+                expected_departure="00:10",
+                platform="1",
+                line="RB",
+                direction="Test",
+                operator="CFL",
+                train_number="5678",
+                is_cancelled=False,
+                delay_minutes=0,
+                calling_points=[],
+                stop_ids=[],
+            ),
+        ]
+
+        # Mock datetime.now() to return 23:40
+        mock_now = MagicMock()
+        mock_now.hour = 23
+        mock_now.minute = 40
+
+        with patch("custom_components.cfl_commute.api.datetime") as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.strptime = datetime.strptime
+
+            # With 60 min window, both should be included
+            # 23:50 is 10 min away, 00:10 is 30 min away (crosses midnight)
+            filtered = client._filter_by_time_window(departures, 60)
+            assert len(filtered) == 2
+
+            # With 5 min window, only departures within 5 min
+            # 23:50 is 10 min away - outside window
+            # 00:10 is 30 min away - outside window
+            filtered = client._filter_by_time_window(departures, 5)
+            assert len(filtered) == 0
+
+        # Test that time_window=0 returns all departures
+        filtered = client._filter_by_time_window(departures, 0)
+        assert len(filtered) == 2
