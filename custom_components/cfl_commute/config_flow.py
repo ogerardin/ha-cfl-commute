@@ -90,18 +90,18 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         query: str,
         stations: list[selector.SelectOptionDict],
-        default: str | None = None,
     ) -> vol.Schema:
         """Build schema with searchable dropdown."""
+        station_field = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=stations,
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        )
         return vol.Schema(
             {
                 vol.Required("station_query", default=query): str,
-                vol.Optional("station", default=default): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=stations,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
+                vol.Optional("station"): station_field,
             }
         )
 
@@ -135,13 +135,10 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not self._origin_stations:
                     errors["station_query"] = "no_results"
 
-        default_station = (
-            self._origin_stations[0]["value"] if self._origin_stations else None
-        )
         return self.async_show_form(
             step_id="origin",
             data_schema=self._get_station_schema(
-                self._origin_query, self._origin_stations, default_station
+                self._origin_query, self._origin_stations
             ),
             errors=errors,
             description_placeholders={"step": "origin"},
@@ -177,15 +174,10 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not self._destination_stations:
                     errors["station_query"] = "no_results"
 
-        default_station = (
-            self._destination_stations[0]["value"]
-            if self._destination_stations
-            else None
-        )
         return self.async_show_form(
             step_id="destination",
             data_schema=self._get_station_schema(
-                self._destination_query, self._destination_stations, default_station
+                self._destination_query, self._destination_stations
             ),
             errors=errors,
             description_placeholders={"step": "destination"},
