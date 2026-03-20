@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -27,6 +27,9 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Luxembourg timezone: CET (UTC+1) or CEST (UTC+2) depending on DST
+LUXEMBOURG_TZ = timezone(timedelta(hours=1))  # CET, will be CEST in summer
 
 
 class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
@@ -113,9 +116,12 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
         - Are cancelled (cancelled trains should remain visible)
         - Have not exceeded the grace period (2 minutes)
 
+        Note: API returns departure times in Luxembourg local time, but 'now'
+        may be in UTC. This method handles timezone conversion.
+
         Args:
             departures: List of departures to filter
-            now: Current datetime
+            now: Current datetime (may be UTC or local time)
 
         Returns:
             Filtered list of departures
@@ -125,6 +131,18 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
 
         grace_period_seconds = 120
         filtered = []
+
+        # Determine the timezone offset for Luxembourg
+        # API times are in Luxembourg local time (CET/CEST)
+        # During winter: CET = UTC+1, during summer: CEST = UTC+2
+        # We use a fixed +1 as a conservative estimate
+        lux_offset = LUXEMBOURG_TZ
+
+        # If 'now' has a timezone, use it; otherwise assume UTC
+        if now.tzinfo is not None:
+            now_tz = now.tzinfo
+        else:
+            now_tz = timezone.utc
 
         for dep in departures:
             if dep.is_cancelled:
@@ -140,25 +158,26 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
             if departure_time:
                 try:
                     dep_time = datetime.strptime(departure_time, "%H:%M:%S")
-                    dep_datetime = now.replace(
+                    # Create departure datetime in Luxembourg local time
+                    dep_local = now.replace(
                         hour=dep_time.hour,
                         minute=dep_time.minute,
                         second=dep_time.second,
                     )
-                    # Handle midnight crossing
-                    # If departure time is "earlier" than current time by more than 12 hours,
-                    # it must be after midnight (next day)
-                    if (
-                        dep_datetime < now
-                        and (now - dep_datetime).total_seconds() > 43200
-                    ):
-                        dep_datetime = dep_datetime + timedelta(days=1)
+                    # Convert Luxembourg local time to UTC for comparison
+                    # Subtract the Luxembourg offset to get UTC
+                    dep_utc = dep_local - timedelta(hours=1)
 
-                    if dep_datetime <= now + timedelta(seconds=grace_period_seconds):
+                    # Handle midnight crossing: if departure UTC is significantly
+                    # before now, it must be after midnight (next day)
+                    if dep_utc < now and (now - dep_utc).total_seconds() > 43200:
+                        dep_utc = dep_utc + timedelta(days=1)
+
+                    if dep_utc <= now + timedelta(seconds=grace_period_seconds):
                         filtered.append(dep)
                     else:
                         _LOGGER.debug(
-                            "Filtered out departed train: %s at %s (now: %s)",
+                            "Filtered out departed train: %s at %s (now: %s UTC)",
                             dep.train_number,
                             departure_time,
                             now.strftime("%H:%M:%S"),

@@ -336,10 +336,12 @@ class CFLCommuteClient:
         """Filter departures by time window (minutes from now).
 
         Handles midnight crossing (e.g., current 23:50, departure 00:10 = +20 min).
+        Note: API returns times in Luxembourg local time (CET/CEST).
         """
         if time_window <= 0:
             return departures
 
+        # API times are in Luxembourg local time, so use local time for comparison
         now = datetime.now()
         now_minutes = now.hour * 60 + now.minute
 
