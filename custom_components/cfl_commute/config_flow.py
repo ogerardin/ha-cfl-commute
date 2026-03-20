@@ -49,9 +49,9 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._destination_station: dict = {}
         self._client: Optional[CFLCommuteClient] = None
         self._origin_query: str = ""
-        self._origin_stations: list[dict] = []
+        self._origin_stations: list[selector.SelectOptionDict] = []
         self._destination_query: str = ""
-        self._destination_stations: list[dict] = []
+        self._destination_stations: list[selector.SelectOptionDict] = []
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -75,7 +75,7 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _search_stations(
         self, query: str, client: CFLCommuteClient
-    ) -> list[dict]:
+    ) -> list[selector.SelectOptionDict]:
         """Search for stations and return formatted results."""
         try:
             stations = await client.search_stations(query)
@@ -87,7 +87,10 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return []
 
     def _get_station_schema(
-        self, query: str, stations: list[dict], default: str | None = None
+        self,
+        query: str,
+        stations: list[selector.SelectOptionDict],
+        default: str | None = None,
     ) -> vol.Schema:
         """Build schema with searchable dropdown."""
         return vol.Schema(
