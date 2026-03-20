@@ -79,16 +79,17 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
     async def _async_update_data(self) -> list[Departure]:
         """Fetch data from CFL API."""
         try:
-            _LOGGER.debug(
-                "Fetching departures from %s to %s",
-                self.origin_name,
-                self.destination_name,
-            )
-
-            # Get current time (format: YYYY-MM-DD, HH:MM as required by API)
             now = dt_util.now()
             date_str = now.strftime("%Y-%m-%d")
             time_str = now.strftime("%H:%M")
+
+            _LOGGER.debug(
+                "Fetching departures from %s to %s at %s %s",
+                self.origin_name,
+                self.destination_name,
+                date_str,
+                time_str,
+            )
 
             # Fetch departures with passlist to get all stops
             departures = await self.api.get_departures(
@@ -108,17 +109,25 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
                 dest_name_lower = self.destination_name.lower()
                 if any(dest_name_lower in cp for cp in calling_point_names):
                     _LOGGER.debug(
-                        "Departure %s to %s passes through %s",
+                        "Departure %s to %s passes through %s (calling points: %s)",
                         dep.train_number,
                         dep.direction,
                         self.destination_name,
+                        dep.calling_points,
                     )
                     filtered_departures.append(dep)
 
             _LOGGER.debug(
-                "%d departures matched destination filter",
+                "%d departures matched destination filter (looking for: '%s')",
                 len(filtered_departures),
+                self.destination_name,
             )
+
+            if not filtered_departures and departures:
+                _LOGGER.debug(
+                    "No departures matched. First departure calling points: %s",
+                    departures[0].calling_points if departures else [],
+                )
 
             return filtered_departures
 
