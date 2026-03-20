@@ -131,28 +131,38 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
                 filtered.append(dep)
                 continue
 
-            if "expected_departure" in dep.__dict__ and dep.expected_departure:
-                try:
-                    dep_time = datetime.strptime(dep.expected_departure, "%H:%M:%S")
-                    dep_datetime = now.replace(
-                        hour=dep_time.hour,
-                        minute=dep_time.minute,
-                        second=dep_time.second,
-                    )
-                    if dep_datetime <= now + timedelta(seconds=grace_period_seconds):
-                        filtered.append(dep)
-                except ValueError:
-                    filtered.append(dep)
+            departure_time = None
+            if hasattr(dep, "expected_departure") and dep.expected_departure:
+                departure_time = dep.expected_departure
             elif dep.scheduled_departure:
+                departure_time = dep.scheduled_departure
+
+            if departure_time:
                 try:
-                    dep_time = datetime.strptime(dep.scheduled_departure, "%H:%M:%S")
+                    dep_time = datetime.strptime(departure_time, "%H:%M:%S")
                     dep_datetime = now.replace(
                         hour=dep_time.hour,
                         minute=dep_time.minute,
                         second=dep_time.second,
                     )
+                    # Handle midnight crossing
+                    # If departure time is "earlier" than current time by more than 12 hours,
+                    # it must be after midnight (next day)
+                    if (
+                        dep_datetime < now
+                        and (now - dep_datetime).total_seconds() > 43200
+                    ):
+                        dep_datetime = dep_datetime + timedelta(days=1)
+
                     if dep_datetime <= now + timedelta(seconds=grace_period_seconds):
                         filtered.append(dep)
+                    else:
+                        _LOGGER.debug(
+                            "Filtered out departed train: %s at %s (now: %s)",
+                            dep.train_number,
+                            departure_time,
+                            now.strftime("%H:%M:%S"),
+                        )
                 except ValueError:
                     filtered.append(dep)
             else:
@@ -215,6 +225,12 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
 
             # Filter departed trains
             filtered_departures = self._filter_departed_trains(filtered_departures, now)
+
+            _LOGGER.debug(
+                "%d departures remain after filtering (time_window: %d min)",
+                len(filtered_departures),
+                self.time_window,
+            )
 
             # Update interval with lock
             async with self._update_lock:
