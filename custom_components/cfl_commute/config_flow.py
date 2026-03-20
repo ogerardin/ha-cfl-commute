@@ -79,17 +79,21 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Search for stations and return formatted results."""
         try:
             stations = await client.search_stations(query)
-            return [{"value": s.id, "label": s.name} for s in stations]
+            return [
+                selector.SelectOptionDict(value=s.id, label=s.name) for s in stations
+            ]
         except Exception as e:
             _LOGGER.error(f"Station search error: {e}")
             return []
 
-    def _get_station_schema(self, query: str, stations: list[dict]) -> vol.Schema:
+    def _get_station_schema(
+        self, query: str, stations: list[dict], default: str | None = None
+    ) -> vol.Schema:
         """Build schema with searchable dropdown."""
         return vol.Schema(
             {
                 vol.Required("station_query", default=query): str,
-                vol.Optional("station"): selector.SelectSelector(
+                vol.Optional("station", default=default): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=stations,
                         mode=selector.SelectSelectorMode.DROPDOWN,
@@ -111,11 +115,7 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             if station_id:
                 station_name = next(
-                    (
-                        r["label"]
-                        for r in self._origin_stations
-                        if r["value"] == station_id
-                    ),
+                    (r.label for r in self._origin_stations if r.value == station_id),
                     station_id,
                 )
                 self._origin_station = {"id": station_id, "name": station_name}
@@ -128,13 +128,14 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 if not self._origin_stations:
                     errors["station_query"] = "no_results"
-            else:
-                errors["station_query"] = "required"
 
+        default_station = (
+            self._origin_stations[0].value if self._origin_stations else None
+        )
         return self.async_show_form(
             step_id="origin",
             data_schema=self._get_station_schema(
-                self._origin_query, self._origin_stations
+                self._origin_query, self._origin_stations, default_station
             ),
             errors=errors,
             description_placeholders={"step": "origin"},
@@ -153,9 +154,9 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if station_id:
                 station_name = next(
                     (
-                        r["label"]
+                        r.label
                         for r in self._destination_stations
-                        if r["value"] == station_id
+                        if r.value == station_id
                     ),
                     station_id,
                 )
@@ -169,13 +170,14 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 if not self._destination_stations:
                     errors["station_query"] = "no_results"
-            else:
-                errors["station_query"] = "required"
 
+        default_station = (
+            self._destination_stations[0].value if self._destination_stations else None
+        )
         return self.async_show_form(
             step_id="destination",
             data_schema=self._get_station_schema(
-                self._destination_query, self._destination_stations
+                self._destination_query, self._destination_stations, default_station
             ),
             errors=errors,
             description_placeholders={"step": "destination"},
