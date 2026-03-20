@@ -26,7 +26,7 @@ from .const import (
     STATUS_SEVERE,
     TRAIN_CANCELLED,
     TRAIN_DELAYED,
-    TRAIN_NO_SERVICE,
+    TRAIN_NO_TRAIN,
     TRAIN_ON_TIME,
 )
 from .coordinator import CFLCommuteDataUpdateCoordinator
@@ -186,7 +186,7 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
         if cancelled:
             parts.append(f"{cancelled} cancelled")
 
-        return ", ".join(parts) if parts else "No service"
+        return ", ".join(parts) if parts else "No trains"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -315,7 +315,7 @@ class CFLCommuteNextTrainSensor(CFLCommuteBaseSensor):
     @property
     def state(self) -> StateType:
         if not self.departures:
-            return TRAIN_NO_SERVICE
+            return TRAIN_NO_TRAIN
 
         train = self.departures[0]
         if train.is_cancelled:
@@ -348,7 +348,7 @@ class CFLCommuteNextTrainSensor(CFLCommuteBaseSensor):
                     "expected_departure": train.expected_departure,
                     "platform": train.platform,
                     "operator": train.operator,
-                    "service_id": train.train_number,
+                    "train_id": train.train_number,
                     "delay_minutes": train.delay_minutes,
                     "is_cancelled": train.is_cancelled,
                     "calling_points": train.calling_points,
@@ -378,7 +378,7 @@ class CFLCommuteTrainSensor(CFLCommuteBaseSensor):
     @property
     def state(self) -> StateType:
         if len(self.departures) < self._train_number:
-            return TRAIN_NO_SERVICE
+            return TRAIN_NO_TRAIN
 
         train = self.departures[self._train_number - 1]
         if train.is_cancelled:
@@ -413,7 +413,7 @@ class CFLCommuteTrainSensor(CFLCommuteBaseSensor):
                     "expected_departure": train.expected_departure,
                     "platform": train.platform,
                     "operator": train.operator,
-                    "service_id": train.train_number,
+                    "train_id": train.train_number,
                     "delay_minutes": train.delay_minutes,
                     "is_cancelled": train.is_cancelled,
                     "calling_points": train.calling_points,

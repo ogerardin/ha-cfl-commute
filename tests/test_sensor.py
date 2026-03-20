@@ -55,7 +55,7 @@ def calculate_summary(departures, minor_threshold):
     if cancelled:
         parts.append(f"{cancelled} cancelled")
 
-    return ", ".join(parts) if parts else "No service"
+    return ", ".join(parts) if parts else "No trains"
 
 
 class TestStatusHierarchy:

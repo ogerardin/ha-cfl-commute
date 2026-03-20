@@ -14,7 +14,7 @@ def mock_config_entry():
         "destination": {"id": "200426001", "name": "Esch-sur-Alzette"},
         "commute_name": "Test Commute",
         "time_window": 60,
-        "num_services": 3,
+        "num_trains": 3,
         "minor_threshold": 3,
         "major_threshold": 10,
         "severe_threshold": 15,
