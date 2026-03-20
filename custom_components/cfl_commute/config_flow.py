@@ -14,13 +14,13 @@ from .const import (
     CONF_DESTINATION,
     CONF_COMMUTE_NAME,
     CONF_TIME_WINDOW,
-    CONF_NUM_SERVICES,
+    CONF_NUM_TRAINS,
     CONF_MINOR_THRESHOLD,
     CONF_MAJOR_THRESHOLD,
     CONF_SEVERE_THRESHOLD,
     CONF_NIGHT_UPDATES,
     DEFAULT_TIME_WINDOW,
-    DEFAULT_NUM_SERVICES,
+    DEFAULT_NUM_TRAINS,
     DEFAULT_MINOR_THRESHOLD,
     DEFAULT_MAJOR_THRESHOLD,
     DEFAULT_SEVERE_THRESHOLD,
@@ -216,8 +216,8 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_TIME_WINDOW: user_input.get(
                         CONF_TIME_WINDOW, DEFAULT_TIME_WINDOW
                     ),
-                    CONF_NUM_SERVICES: user_input.get(
-                        CONF_NUM_SERVICES, DEFAULT_NUM_SERVICES
+                    CONF_NUM_TRAINS: user_input.get(
+                        CONF_NUM_TRAINS, DEFAULT_NUM_TRAINS
                     ),
                     CONF_MINOR_THRESHOLD: user_input.get(
                         CONF_MINOR_THRESHOLD, DEFAULT_MINOR_THRESHOLD
@@ -244,9 +244,9 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         CONF_TIME_WINDOW, default=DEFAULT_TIME_WINDOW
                     ): vol.All(vol.Coerce(int), vol.Range(min=15, max=180)),
-                    vol.Required(
-                        CONF_NUM_SERVICES, default=DEFAULT_NUM_SERVICES
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
+                    vol.Required(CONF_NUM_TRAINS, default=DEFAULT_NUM_TRAINS): vol.All(
+                        vol.Coerce(int), vol.Range(min=1, max=10)
+                    ),
                     vol.Required(
                         CONF_MINOR_THRESHOLD, default=DEFAULT_MINOR_THRESHOLD
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
@@ -305,10 +305,8 @@ class CFLCommuteOptionsFlow(config_entries.OptionsFlow):
                     default=current_options.get(CONF_TIME_WINDOW, DEFAULT_TIME_WINDOW),
                 ): vol.All(vol.Coerce(int), vol.Range(min=15, max=180)),
                 vol.Required(
-                    CONF_NUM_SERVICES,
-                    default=current_options.get(
-                        CONF_NUM_SERVICES, DEFAULT_NUM_SERVICES
-                    ),
+                    CONF_NUM_TRAINS,
+                    default=current_options.get(CONF_NUM_TRAINS, DEFAULT_NUM_TRAINS),
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
                 vol.Required(
                     CONF_MINOR_THRESHOLD,
@@ -351,10 +349,8 @@ class CFLCommuteOptionsFlow(config_entries.OptionsFlow):
                     default=current_options.get(CONF_TIME_WINDOW, DEFAULT_TIME_WINDOW),
                 ): vol.All(vol.Coerce(int), vol.Range(min=15, max=180)),
                 vol.Required(
-                    CONF_NUM_SERVICES,
-                    default=current_options.get(
-                        CONF_NUM_SERVICES, DEFAULT_NUM_SERVICES
-                    ),
+                    CONF_NUM_TRAINS,
+                    default=current_options.get(CONF_NUM_TRAINS, DEFAULT_NUM_TRAINS),
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
                 vol.Required(
                     CONF_MINOR_THRESHOLD,

@@ -13,10 +13,11 @@ from .const import (
     CONF_DESTINATION,
     CONF_MAJOR_THRESHOLD,
     CONF_MINOR_THRESHOLD,
-    CONF_NUM_SERVICES,
+    CONF_NUM_TRAINS,
     CONF_ORIGIN,
     CONF_SEVERE_THRESHOLD,
     CONF_TIME_WINDOW,
+    DEFAULT_NUM_TRAINS,
     DOMAIN,
     STATUS_CRITICAL,
     STATUS_MAJOR,
@@ -48,7 +49,7 @@ async def async_setup_entry(
     commute_name = config_entry.data.get(CONF_COMMUTE_NAME, "cfl_commute")
     origin = config_entry.data.get(CONF_ORIGIN, {})
     destination = config_entry.data.get(CONF_DESTINATION, {})
-    num_services = config_entry.data.get(CONF_NUM_SERVICES, 3)
+    num_trains = config_entry.data.get(CONF_NUM_TRAINS, DEFAULT_NUM_TRAINS)
     minor_threshold = config_entry.data.get(CONF_MINOR_THRESHOLD, 3)
     major_threshold = config_entry.data.get(CONF_MAJOR_THRESHOLD, 10)
     severe_threshold = config_entry.data.get(CONF_SEVERE_THRESHOLD, 15)
@@ -59,7 +60,7 @@ async def async_setup_entry(
             commute_name=commute_name,
             origin=origin,
             destination=destination,
-            num_services=num_services,
+            num_trains=num_trains,
             minor_threshold=minor_threshold,
             major_threshold=major_threshold,
             severe_threshold=severe_threshold,
@@ -69,7 +70,7 @@ async def async_setup_entry(
             commute_name=commute_name,
             origin=origin,
             destination=destination,
-            num_services=num_services,
+            num_trains=num_trains,
             minor_threshold=minor_threshold,
             major_threshold=major_threshold,
             severe_threshold=severe_threshold,
@@ -79,21 +80,21 @@ async def async_setup_entry(
             commute_name=commute_name,
             origin=origin,
             destination=destination,
-            num_services=num_services,
+            num_trains=num_trains,
             minor_threshold=minor_threshold,
             major_threshold=major_threshold,
             severe_threshold=severe_threshold,
         ),
     ]
 
-    for i in range(1, num_services + 1):
+    for i in range(1, num_trains + 1):
         sensors.append(
             CFLCommuteTrainSensor(
                 coordinator=coordinator,
                 commute_name=commute_name,
                 origin=origin,
                 destination=destination,
-                num_services=num_services,
+                num_trains=num_trains,
                 minor_threshold=minor_threshold,
                 major_threshold=major_threshold,
                 severe_threshold=severe_threshold,
@@ -113,7 +114,7 @@ class CFLCommuteBaseSensor(CoordinatorEntity, SensorEntity):
         commute_name: str,
         origin: dict,
         destination: dict,
-        num_services: int,
+        num_trains: int,
         minor_threshold: int,
         major_threshold: int,
         severe_threshold: int,
@@ -125,7 +126,7 @@ class CFLCommuteBaseSensor(CoordinatorEntity, SensorEntity):
         self._destination_name = destination.get("name", "")
         self._origin_id = origin.get("id", "")
         self._destination_id = destination.get("id", "")
-        self._num_services = num_services
+        self._num_trains = num_trains
         self._minor_threshold = minor_threshold
         self._major_threshold = major_threshold
         self._severe_threshold = severe_threshold

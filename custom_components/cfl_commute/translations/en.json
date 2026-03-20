@@ -30,7 +30,7 @@
         "data": {
           "commute_name": "Commute Name",
           "time_window": "Time Window (minutes)",
-          "num_services": "Number of Services",
+          "num_trains": "Number of Trains",
           "minor_threshold": "Minor Delays Threshold (min)",
           "major_threshold": "Major Delays Threshold (min)",
           "severe_threshold": "Severe Disruption Threshold (min)",

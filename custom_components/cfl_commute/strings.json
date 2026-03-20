@@ -22,7 +22,7 @@
         "data": {
           "commute_name": "Commute Name",
           "time_window": "Time Window (minutes)",
-          "num_services": "Number of Services to Track",
+          "num_trains": "Number of Trains to Track",
           "severe_delay_threshold": "Severe Disruption Threshold (minutes)",
           "major_delay_threshold": "Major Delays Threshold (minutes)",
           "minor_delay_threshold": "Minor Delays Threshold (minutes)",
@@ -56,7 +56,7 @@
         "description": "Modify your commute tracking settings.",
         "data": {
           "time_window": "Time Window (minutes)",
-          "num_services": "Number of Services to Track",
+          "num_trains": "Number of Trains to Track",
           "severe_delay_threshold": "Severe Disruption Threshold (minutes)",
           "major_delay_threshold": "Major Delays Threshold (minutes)",
           "minor_delay_threshold": "Minor Delays Threshold (minutes)",

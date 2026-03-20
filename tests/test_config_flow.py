@@ -11,9 +11,9 @@ from custom_components.cfl_commute.const import (
     CONF_API_KEY,
     CONF_COMMUTE_NAME,
     CONF_TIME_WINDOW,
-    CONF_NUM_SERVICES,
+    CONF_NUM_TRAINS,
     DEFAULT_TIME_WINDOW,
-    DEFAULT_NUM_SERVICES,
+    DEFAULT_NUM_TRAINS,
 )
 
 

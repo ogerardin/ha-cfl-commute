@@ -11,7 +11,7 @@ from .api import CFLCommuteClient, Departure
 from .const import (
     CONF_NIGHT_UPDATES,
     CONF_TIME_WINDOW,
-    CONF_NUM_SERVICES,
+    CONF_NUM_TRAINS,
     DOMAIN,
     UPDATE_INTERVAL_PEAK,
     UPDATE_INTERVAL_OFFPEAK,
