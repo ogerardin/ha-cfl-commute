@@ -226,6 +226,9 @@ class CFLCommuteClient:
             "lang": lang,
             "format": "json",
             "passlist": "1",  # Include all stops for this journey
+            "duration": str(
+                time_window
+            ),  # Request departures within time_window minutes
         }
 
         # Add date/time parameters if provided (format: YYYY-MM-DD, HH:MM)
