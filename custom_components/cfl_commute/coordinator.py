@@ -167,7 +167,7 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
                     if dep_utc < now and (now - dep_utc).total_seconds() > 43200:
                         dep_utc = dep_utc + timedelta(days=1)
 
-                    if dep_utc <= now + timedelta(seconds=grace_period_seconds):
+                    if dep_utc > now - timedelta(seconds=grace_period_seconds):
                         filtered.append(dep)
                     else:
                         _LOGGER.debug(
