@@ -49,12 +49,16 @@ async def async_ensure_helpers(hass: HomeAssistant, entry: ConfigEntry) -> None:
         ),
     ]
 
-    # The input_text storage collection is registered under hass.data["input_text"]
-    # as {"storage_collection": ..., ...} during HA core setup.
-    it_data = hass.data.get(_INPUT_TEXT_DOMAIN, {})
-    storage_collection = (
-        it_data.get("storage_collection") if isinstance(it_data, dict) else None
-    )
+    # The input_text storage collection is registered under hass.data["input_text"].
+    # Older HA versions stored it as {"storage_collection": ..., "yaml_collection": ...};
+    # newer versions (2024.x+) store the collection object directly.
+    it_data = hass.data.get(_INPUT_TEXT_DOMAIN)
+    if isinstance(it_data, dict):
+        storage_collection = it_data.get("storage_collection")
+    elif it_data is not None and hasattr(it_data, "async_create_item"):
+        storage_collection = it_data
+    else:
+        storage_collection = None
 
     if storage_collection is None:
         _LOGGER.warning(
