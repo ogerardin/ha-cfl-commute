@@ -250,24 +250,40 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="settings",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_COMMUTE_NAME, default=default_name): str,
                     vol.Required(
-                        CONF_TIME_WINDOW, default=DEFAULT_TIME_WINDOW
+                        CONF_COMMUTE_NAME,
+                        default=default_name,
+                        description="Commute Name",
+                    ): str,
+                    vol.Required(
+                        CONF_TIME_WINDOW,
+                        default=DEFAULT_TIME_WINDOW,
+                        description="Time Window (minutes)",
                     ): vol.All(vol.Coerce(int), vol.Range(min=0, max=180)),
-                    vol.Required(CONF_NUM_TRAINS, default=DEFAULT_NUM_TRAINS): vol.All(
-                        vol.Coerce(int), vol.Range(min=1, max=10)
-                    ),
                     vol.Required(
-                        CONF_MINOR_THRESHOLD, default=DEFAULT_MINOR_THRESHOLD
+                        CONF_NUM_TRAINS,
+                        default=DEFAULT_NUM_TRAINS,
+                        description="Number of Trains",
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
+                    vol.Required(
+                        CONF_MINOR_THRESHOLD,
+                        default=DEFAULT_MINOR_THRESHOLD,
+                        description="Minor Delays Threshold (min)",
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
                     vol.Required(
-                        CONF_MAJOR_THRESHOLD, default=DEFAULT_MAJOR_THRESHOLD
+                        CONF_MAJOR_THRESHOLD,
+                        default=DEFAULT_MAJOR_THRESHOLD,
+                        description="Major Delays Threshold (min)",
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
                     vol.Required(
-                        CONF_SEVERE_THRESHOLD, default=DEFAULT_SEVERE_THRESHOLD
+                        CONF_SEVERE_THRESHOLD,
+                        default=DEFAULT_SEVERE_THRESHOLD,
+                        description="Severe Disruption Threshold (min)",
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
                     vol.Required(
-                        CONF_NIGHT_UPDATES, default=DEFAULT_NIGHT_UPDATES
+                        CONF_NIGHT_UPDATES,
+                        default=DEFAULT_NIGHT_UPDATES,
+                        description="Enable Night Updates",
                     ): bool,
                 }
             ),
@@ -392,34 +408,40 @@ class CFLCommuteOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     CONF_TIME_WINDOW,
                     default=current_options.get(CONF_TIME_WINDOW, DEFAULT_TIME_WINDOW),
+                    description="Time Window (minutes)",
                 ): vol.All(vol.Coerce(int), vol.Range(min=0, max=180)),
                 vol.Required(
                     CONF_NUM_TRAINS,
                     default=current_options.get(CONF_NUM_TRAINS, DEFAULT_NUM_TRAINS),
+                    description="Number of Trains",
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
                 vol.Required(
                     CONF_MINOR_THRESHOLD,
                     default=current_options.get(
                         CONF_MINOR_THRESHOLD, DEFAULT_MINOR_THRESHOLD
                     ),
+                    description="Minor Delays Threshold (min)",
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
                 vol.Required(
                     CONF_MAJOR_THRESHOLD,
                     default=current_options.get(
                         CONF_MAJOR_THRESHOLD, DEFAULT_MAJOR_THRESHOLD
                     ),
+                    description="Major Delays Threshold (min)",
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
                 vol.Required(
                     CONF_SEVERE_THRESHOLD,
                     default=current_options.get(
                         CONF_SEVERE_THRESHOLD, DEFAULT_SEVERE_THRESHOLD
                     ),
+                    description="Severe Disruption Threshold (min)",
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
                 vol.Required(
                     CONF_NIGHT_UPDATES,
                     default=current_options.get(
                         CONF_NIGHT_UPDATES, DEFAULT_NIGHT_UPDATES
                     ),
+                    description="Enable Night Updates",
                 ): bool,
             }
         )

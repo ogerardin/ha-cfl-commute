@@ -1,14 +1,58 @@
 # CFL Commute
 
-[![HACS-Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/release/ogerardin/ha-cfl-commute.svg)](https://github.com/ogerardin/ha-cfl-commute/releases)
-[![License](https://img.shields.io/github/license/ogerardin/ha-cfl-commute.svg)](LICENSE)
+The integration is based on the notion of "commute". A commute is a single trip from an origin station to a destination station.
+At the moment, a commute does not include itineraries that require a train change
 
-A custom Home Assistant integration that tracks regular commutes using CFL (Chemins de Fer Luxembourgeois) real-time data from the mobiliteit.lu API. Monitor train services, get disruption alerts, and automate your commuting routine.
+## Configuration
 
-## Sensors
+### Initial Setup
 
-The integration creates multiple sensors for each configured commute:
+1. Go to **Settings** → **Devices & Services**
+2. Click **+ Add Integration**
+3. Search for "CFL Commute"
+4. Follow the configuration steps:
+
+#### Step 1: API Key (skipped if already configured)
+- Enter your CFL API key
+- This step is skipped if you already have a commute configured
+- The API key is shared across all commutes
+
+#### Step 2: Origin Station
+- Search for your origin station using the searchable dropdown
+- Select your station from the results
+
+#### Step 3: Destination Station
+- Search for your destination station
+- Select your station from the results
+
+#### Step 4: Commute Settings
+- **Commute Name**: Friendly name (default: "Origin → Destination")
+- **Time Window (minutes)**: How many minutes ahead to look (0-180, default: 60, use 0 for all departures)
+- **Number of Trains**: How many trains to track (1-10, default: 3)
+- **Minor Delays Threshold (min)**: Minutes of delay for "Minor Delays" status (default: 3)
+- **Major Delays Threshold (min)**: Minutes of delay for "Major Delays" status (default: 10)
+- **Severe Disruption Threshold (min)**: Minutes of delay for "Severe Disruption" status (default: 15)
+- **Enable Night Updates**: Keep polling during night hours (23:00-05:00)
+
+#### Step 5: Return Journey (optional)
+- Option to track the reverse commute automatically
+- Skipped if the reverse commute is already configured
+
+### Modifying Settings
+
+1. Go to **Settings** → **Devices & Services**
+2. Find your CFL Commute integration
+3. Click **Configure**
+4. Adjust your settings
+
+### Multiple Commutes
+
+To track additional commutes, click on "Add entry" and configure as many different origin/destination pairs as required.
+
+
+
+## Sensor details
+Each configured commute creates multiple sensors
 
 ### 1. Commute Summary Sensor
 
@@ -75,43 +119,6 @@ The integration creates multiple sensors for each configured commute:
   - `delayed_count`: Total count of delayed trains
   - `max_delay_minutes`: Maximum delay in minutes
   - `disruption_reasons`: List of reasons for disruptions
-
-## Configuration
-
-### Initial Setup
-
-1. Go to **Settings** → **Devices & Services**
-2. Click **+ Add Integration**
-3. Search for "CFL Commute"
-4. Follow the configuration steps:
-
-#### Step 1: API Authentication
-- Enter your CFL API key
-- The integration will validate your credentials
-
-#### Step 2: Route Configuration
-- **Origin Station**: Search for your origin station
-- **Destination Station**: Search for your destination station
-
-#### Step 3: Commute Settings
-- **Commute Name**: Friendly name (default: "Origin to Destination")
-- **Time Window (minutes)**: How many minutes ahead to look (0-180, default: 60, use 0 for all departures)
-- **Number of Trains**: How many trains to track (1-10, default: 3)
-- **Minor Delays Threshold (min)**: Minutes of delay for "Minor Delays" status (default: 3)
-- **Major Delays Threshold (min)**: Minutes of delay for "Major Delays" status (default: 10)
-- **Severe Disruption Threshold (min)**: Minutes of delay for "Severe Disruption" status (default: 15)
-- **Enable Night Updates**: Keep polling during night hours (23:00-05:00)
-
-### Modifying Settings
-
-1. Go to **Settings** → **Devices & Services**
-2. Find your CFL Commute integration
-3. Click **Configure**
-4. Adjust your settings
-
-### Multiple Commutes
-
-To track multiple routes, add the integration multiple times with different origin/destination pairs.
 
 ## Update Intervals
 

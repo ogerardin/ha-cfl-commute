@@ -1,0 +1,133 @@
+{
+  "serverVersion": "2.41.0",
+  "dialectVersion": "2.41",
+  "Departure": [
+    {
+      "JourneyStatus": "C",
+      "stop": "Luxembourg, Gare Centrale",
+      "time": "09:00:00",
+      "rtTime": null,
+      "delay": null,
+      "platform": "3",
+      "ProductAtStop": {
+        "name": "RE 10",
+        "catOut": "RE",
+        "operatorInfo": {
+          "nameS": "CFL"
+        }
+      },
+      "direction": "Troisvierges, Gare",
+      "reachable": false,
+      "Stops": {
+        "Stop": [
+          {
+            "name": "Luxembourg, Gare Centrale",
+            "extId": "200405060",
+            "idx": 0
+          },
+          {
+            "name": "Walferdange",
+            "extId": "200418024",
+            "idx": 1
+          },
+          {
+            "name": "Ettelbruck, Gare",
+            "extId": "200416011",
+            "idx": 2
+          },
+          {
+            "name": "Diekirch, Gare",
+            "extId": "200404004",
+            "idx": 3
+          },
+          {
+            "name": "Troisvierges, Gare",
+            "extId": "200419005",
+            "idx": 4
+          }
+        ]
+      }
+    },
+    {
+      "JourneyStatus": "P",
+      "stop": "Luxembourg, Gare Centrale",
+      "time": "09:15:00",
+      "rtTime": "09:15:00",
+      "delay": 0,
+      "platform": "5",
+      "ProductAtStop": {
+        "name": "RB 50",
+        "catOut": "RB",
+        "operatorInfo": {
+          "nameS": "CFL"
+        }
+      },
+      "direction": "Arlon, Gare",
+      "Stops": {
+        "Stop": [
+          {
+            "name": "Luxembourg, Gare Centrale",
+            "extId": "200405060",
+            "idx": 0
+          },
+          {
+            "name": "Hollerich, Gare",
+            "extId": "200405018",
+            "idx": 1
+          },
+          {
+            "name": "Mamer, Gare",
+            "extId": "200405026",
+            "idx": 2
+          },
+          {
+            "name": "Arlon, Gare",
+            "extId": "200401005",
+            "idx": 3
+          }
+        ]
+      }
+    },
+    {
+      "JourneyStatus": "C",
+      "stop": "Luxembourg, Gare Centrale",
+      "time": "09:30:00",
+      "rtTime": null,
+      "delay": null,
+      "platform": "2",
+      "ProductAtStop": {
+        "name": "IC 512",
+        "catOut": "IC",
+        "operatorInfo": {
+          "nameS": "CFL"
+        }
+      },
+      "direction": "Rodange, Gare",
+      "reachable": false,
+      "Stops": {
+        "Stop": [
+          {
+            "name": "Luxembourg, Gare Centrale",
+            "extId": "200405060",
+            "idx": 0
+          },
+          {
+            "name": "Howald, Gare",
+            "extId": "200417010",
+            "idx": 1
+          },
+          {
+            "name": "Belval (Université), Gare",
+            "extId": "200403008",
+            "idx": 2
+          },
+          {
+            "name": "Rodange, Gare",
+            "extId": "200405035",
+            "idx": 3
+          }
+        ]
+      }
+    }
+  ]
+}
