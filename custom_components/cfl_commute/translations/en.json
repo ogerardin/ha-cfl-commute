@@ -27,13 +27,55 @@
       },
       "settings": {
         "title": "Commute Settings",
-        "description": "Configure your commute tracking settings"
+        "description": "Configure your commute tracking settings",
+        "data": {
+          "commute_name": "Commute Name",
+          "time_window": "Time Window (minutes)",
+          "num_trains": "Number of Trains",
+          "minor_threshold": "Minor Delays Threshold (min)",
+          "major_threshold": "Major Delays Threshold (min)",
+          "severe_threshold": "Severe Disruption Threshold (min)",
+          "night_updates": "Enable Night Updates"
+        },
+        "data_description": {
+          "time_window": "How many minutes ahead to look (0 for all departures)",
+          "num_trains": "How many trains to track",
+          "minor_threshold": "Minutes of delay for Minor Delays status",
+          "major_threshold": "Minutes of delay for Major Delays status",
+          "severe_threshold": "Minutes of delay for Severe Disruption status",
+          "night_updates": "Keep polling during night hours (23:00-05:00)"
+        }
       },
       "return_journey": {
         "title": "Return Journey",
         "description": "Would you also like to track the return journey from {destination} to {origin}?",
         "data": {
           "add_return_journey": "Enable return journey"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update Commute Settings",
+        "description": "Modify your commute tracking settings.",
+        "data": {
+          "commute_name": "Commute Name",
+          "time_window": "Time Window (minutes)",
+          "num_trains": "Number of Trains",
+          "minor_threshold": "Minor Delays Threshold (min)",
+          "major_threshold": "Major Delays Threshold (min)",
+          "severe_threshold": "Severe Disruption Threshold (min)",
+          "night_updates": "Enable Night Updates"
+        },
+        "data_description": {
+          "time_window": "How many minutes ahead to look (0 for all departures)",
+          "num_trains": "How many trains to track",
+          "minor_threshold": "Minutes of delay for Minor Delays status",
+          "major_threshold": "Minutes of delay for Major Delays status",
+          "severe_threshold": "Minutes of delay for Severe Disruption status",
+          "night_updates": "Keep polling during night hours (23:00-05:00)"
         }
       }
     }
