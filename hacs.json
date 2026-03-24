@@ -1,6 +1,5 @@
 {
   "name": "CFL Commute",
   "country": "LU",
-  "render_readme": false,
   "homeassistant": "2024.1.0"
 }
