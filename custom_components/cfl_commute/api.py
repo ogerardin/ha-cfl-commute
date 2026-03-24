@@ -192,6 +192,12 @@ class CFLCommuteClient:
             if not stop:
                 continue
 
+            # Filter: only include stations with train service
+            product_at_stop = stop.get("productAtStop", [])
+            categories = {p.get("catOut") for p in product_at_stop}
+            if not (categories & self.TRAIN_CATEGORIES):
+                continue
+
             # Extract station name
             name = stop.get("name", "")
             if query.lower() not in name.lower():

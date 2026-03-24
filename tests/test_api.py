@@ -37,6 +37,10 @@ class TestCFLCommuteClient:
                         "name": "Luxembourg",
                         "lon": 6.1,
                         "lat": 49.6,
+                        "productAtStop": [
+                            {"catOut": "RB"},
+                            {"catOut": "IC"},
+                        ],
                     }
                 },
                 {
@@ -46,6 +50,9 @@ class TestCFLCommuteClient:
                         "name": "Luxembourg Airport",
                         "lon": 6.2,
                         "lat": 49.6,
+                        "productAtStop": [
+                            {"catOut": "Tram"},
+                        ],
                     }
                 },
             ]
@@ -56,7 +63,67 @@ class TestCFLCommuteClient:
             stations = await client.search_stations("Luxembourg")
 
         assert isinstance(stations, list)
-        assert len(stations) == 2
+        assert len(stations) == 1
+        assert stations[0].name == "Luxembourg"
+
+    @pytest.mark.asyncio
+    async def test_search_stations_filters_out_bus_only(self):
+        """Test that bus-only stations are filtered out."""
+        client = CFLCommuteClient("test_api_key")
+
+        mock_response = {
+            "stopLocationOrCoordLocation": [
+                {
+                    "StopLocation": {
+                        "id": "A=1@O=Rouscht@X=6092924@Y=49786459@U=82@L=160102002@",
+                        "extId": "160102002",
+                        "name": "Rouscht",
+                        "lon": 6.09,
+                        "lat": 49.79,
+                        "productAtStop": [
+                            {"catOut": "Bus"},
+                            {"catOut": "Bus"},
+                        ],
+                    }
+                },
+            ]
+        }
+
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
+            stations = await client.search_stations("Rouscht")
+
+        assert len(stations) == 0
+
+    @pytest.mark.asyncio
+    async def test_search_stations_includes_train_stations(self):
+        """Test that train stations are included."""
+        client = CFLCommuteClient("test_api_key")
+
+        mock_response = {
+            "stopLocationOrCoordLocation": [
+                {
+                    "StopLocation": {
+                        "id": "A=1@O=Esch-sur-Alzette@X=5<<>>>>@L=200417010@",
+                        "extId": "200417010",
+                        "name": "Esch-sur-Alzette, Gare",
+                        "lon": 5.94,
+                        "lat": 49.50,
+                        "productAtStop": [
+                            {"catOut": "RB"},
+                            {"catOut": "RE"},
+                        ],
+                    }
+                },
+            ]
+        }
+
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
+            stations = await client.search_stations("Esch")
+
+        assert len(stations) == 1
+        assert stations[0].name == "Esch-sur-Alzette, Gare"
 
     @pytest.mark.asyncio
     async def test_get_departures_filters_non_rail(self):
