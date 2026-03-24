@@ -164,7 +164,7 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
     def state(self) -> StateType:
         """Return the state of the sensor."""
         if not self.departures:
-            return "No trains"
+            return "No train"
 
         on_time = sum(
             1
