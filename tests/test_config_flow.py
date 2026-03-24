@@ -76,7 +76,8 @@ class TestApiKeyReuse:
 
         result = await flow.async_step_user()
 
-        assert result["step_id"] == "origin"
+        assert result["type"] == "abort"
+        assert "Failed to fetch stations" in result["reason"]
         assert flow._api_key == "existing_api_key"
 
     @pytest.mark.asyncio
@@ -218,7 +219,7 @@ class TestReturnJourneyFeature:
 
 
 class TestStationSelection:
-    """Test station selection with combobox."""
+    """Test station selection with dropdown."""
 
     @pytest.fixture
     def mock_client(self):
@@ -241,59 +242,31 @@ class TestStationSelection:
         return station
 
     @pytest.mark.asyncio
-    async def test_single_station_match_auto_advances(self, mock_client):
-        """Test that a single station match auto-advances to next step."""
-        flow = self._create_flow_with_client(mock_client)
-
-        mock_client.search_stations = AsyncMock(
-            return_value=[self._create_station_mock("200405060", "Luxembourg")]
-        )
-
-        result = await flow.async_step_origin({"station": "Luxembourg"})
-
-        assert result["step_id"] == "destination"
-        assert flow._origin_station == {"id": "200405060", "name": "Luxembourg"}
-
-    @pytest.mark.asyncio
-    async def test_multiple_station_matches_shows_dropdown(self, mock_client):
-        """Test that multiple matches shows dropdown for selection."""
+    async def test_fetches_all_stations_on_first_load(self, mock_client):
+        """Test that all stations are fetched on first access."""
         flow = self._create_flow_with_client(mock_client)
 
         mock_client.search_stations = AsyncMock(
             return_value=[
                 self._create_station_mock("200405060", "Luxembourg"),
-                self._create_station_mock("200405061", "Luxembourg-Patinoire"),
+                self._create_station_mock("200417010", "Esch-sur-Alzette"),
             ]
         )
 
-        result = await flow.async_step_origin({"station": "Luxembourg"})
+        result = await flow.async_step_origin()
 
         assert result["step_id"] == "origin"
-        assert len(flow._origin_stations) == 2
+        mock_client.search_stations.assert_called_once_with("")
+        assert len(flow._all_stations) == 2
 
     @pytest.mark.asyncio
-    async def test_no_station_matches_shows_error(self, mock_client):
-        """Test that no matches shows error."""
+    async def test_select_station_advances_to_destination(self, mock_client):
+        """Test that selecting a station advances to destination step."""
         flow = self._create_flow_with_client(mock_client)
-
-        mock_client.search_stations = AsyncMock(return_value=[])
-
-        result = await flow.async_step_origin({"station": "InvalidStation"})
-
-        assert result["step_id"] == "origin"
-        assert "errors" in result
-        assert "station" in result["errors"]
-
-    @pytest.mark.asyncio
-    async def test_exact_station_id_match_advances(self, mock_client):
-        """Test that exact station ID match from dropdown advances."""
-        flow = self._create_flow_with_client(mock_client)
-
-        mock_client.search_stations = AsyncMock(
-            return_value=[
-                self._create_station_mock("200405060", "Luxembourg"),
-            ]
-        )
+        flow._all_stations = [
+            {"value": "200405060", "label": "Luxembourg"},
+            {"value": "200417010", "label": "Esch-sur-Alzette"},
+        ]
 
         result = await flow.async_step_origin({"station": "200405060"})
 
@@ -301,19 +274,37 @@ class TestStationSelection:
         assert flow._origin_station == {"id": "200405060", "name": "Luxembourg"}
 
     @pytest.mark.asyncio
-    async def test_destination_single_match_auto_advances(self, mock_client):
-        """Test destination selection with single match auto-advances."""
+    async def test_destination_selection_advances_to_settings(self, mock_client):
+        """Test that selecting destination advances to settings."""
         flow = self._create_flow_with_client(mock_client)
+        flow._all_stations = [
+            {"value": "200405060", "label": "Luxembourg"},
+            {"value": "200417010", "label": "Esch-sur-Alzette"},
+        ]
         flow._origin_station = {"id": "200405060", "name": "Luxembourg"}
 
-        mock_client.search_stations = AsyncMock(
-            return_value=[self._create_station_mock("200417010", "Esch-sur-Alzette")]
-        )
-
-        result = await flow.async_step_destination({"station": "Esch-sur-Alzette"})
+        result = await flow.async_step_destination({"station": "200417010"})
 
         assert result["step_id"] == "settings"
         assert flow._destination_station == {
             "id": "200417010",
             "name": "Esch-sur-Alzette",
         }
+
+    @pytest.mark.asyncio
+    async def test_stations_are_sorted_alphabetically(self, mock_client):
+        """Test that stations are returned in alphabetical order."""
+        flow = self._create_flow_with_client(mock_client)
+
+        mock_client.search_stations = AsyncMock(
+            return_value=[
+                self._create_station_mock("200417010", "Esch-sur-Alzette"),
+                self._create_station_mock("200405060", "Luxembourg"),
+                self._create_station_mock("200418020", "Bettembourg"),
+            ]
+        )
+
+        await flow.async_step_origin()
+
+        labels = [s["label"] for s in flow._all_stations]
+        assert labels == ["Bettembourg", "Esch-sur-Alzette", "Luxembourg"]

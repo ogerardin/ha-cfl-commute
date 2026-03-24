@@ -38,6 +38,10 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
+class CannotConnect(Exception):
+    """Error to indicate we cannot connect to the API."""
+
+
 class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for CFL Commute."""
 
@@ -49,8 +53,7 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._origin_station: dict = {}
         self._destination_station: dict = {}
         self._client: Optional[CFLCommuteClient] = None
-        self._origin_stations: list[selector.SelectOptionDict] = []
-        self._destination_stations: list[selector.SelectOptionDict] = []
+        self._all_stations: list[selector.SelectOptionDict] = []
         self._commute_name: str | None = None
         self._time_window: int | None = None
         self._num_trains: int | None = None
@@ -65,7 +68,6 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
-        # Check for existing entries with API key
         existing_entries = self._async_current_entries()
         if existing_entries:
             first_entry = existing_entries[0]
@@ -88,38 +90,31 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def _search_stations(
-        self, query: str, client: CFLCommuteClient
-    ) -> list[selector.SelectOptionDict]:
-        """Search for stations and return formatted results."""
+    async def _fetch_all_stations(self) -> list[selector.SelectOptionDict]:
+        """Fetch all stations from API."""
+        if not self._client:
+            raise CannotConnect("API client not initialized")
         try:
-            stations = await client.search_stations(query)
-            return [
-                selector.SelectOptionDict(value=s.id, label=s.name) for s in stations
-            ]
+            stations = await self._client.search_stations("")
+            return sorted(
+                [selector.SelectOptionDict(value=s.id, label=s.name) for s in stations],
+                key=lambda x: x["label"],
+            )
         except Exception as e:
-            _LOGGER.error(f"Station search error: {e}")
-            return []
+            _LOGGER.error(f"Failed to fetch stations: {e}")
+            raise CannotConnect(f"Failed to fetch stations: {e}")
 
     def _get_station_schema(
         self,
         stations: list[selector.SelectOptionDict],
-        default: str | None = None,
     ) -> vol.Schema:
-        """Build schema with combobox (dropdown + free-text)."""
+        """Build schema with station dropdown."""
         station_selector = selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=stations,
                 mode=selector.SelectSelectorMode.DROPDOWN,
-                custom_value=True,
             )
         )
-        if default:
-            return vol.Schema(
-                {
-                    vol.Required("station", default=default): station_selector,
-                }
-            )
         return vol.Schema(
             {
                 vol.Required("station"): station_selector,
@@ -132,39 +127,29 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle origin station selection."""
         errors: dict[str, str] = {}
 
-        if user_input is not None:
-            station_value = user_input.get("station", "").strip()
+        if not self._all_stations:
+            try:
+                self._all_stations = await self._fetch_all_stations()
+            except CannotConnect as e:
+                return self.async_abort(reason=str(e))
 
-            if station_value:
-                self._origin_stations = await self._search_stations(
-                    station_value, self._client
+        if user_input is not None:
+            station_id = user_input.get("station")
+            if station_id:
+                station_name = next(
+                    (
+                        s["label"]
+                        for s in self._all_stations
+                        if s["value"] == station_id
+                    ),
+                    station_id,
                 )
-                if not self._origin_stations:
-                    errors["station"] = "no_results"
-                elif len(self._origin_stations) == 1:
-                    station_id = self._origin_stations[0]["value"]
-                    station_name = self._origin_stations[0]["label"]
-                    self._origin_station = {"id": station_id, "name": station_name}
-                    return await self.async_step_destination()
-                else:
-                    matching = next(
-                        (
-                            r
-                            for r in self._origin_stations
-                            if r["value"] == station_value
-                        ),
-                        None,
-                    )
-                    if matching:
-                        self._origin_station = {
-                            "id": matching["value"],
-                            "name": matching["label"],
-                        }
-                        return await self.async_step_destination()
+                self._origin_station = {"id": station_id, "name": station_name}
+                return await self.async_step_destination()
 
         return self.async_show_form(
             step_id="origin",
-            data_schema=self._get_station_schema(self._origin_stations),
+            data_schema=self._get_station_schema(self._all_stations),
             errors=errors,
             description_placeholders={"step": "origin"},
         )
@@ -176,38 +161,22 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            station_value = user_input.get("station", "").strip()
-
-            if station_value:
-                self._destination_stations = await self._search_stations(
-                    station_value, self._client
+            station_id = user_input.get("station")
+            if station_id:
+                station_name = next(
+                    (
+                        s["label"]
+                        for s in self._all_stations
+                        if s["value"] == station_id
+                    ),
+                    station_id,
                 )
-                if not self._destination_stations:
-                    errors["station"] = "no_results"
-                elif len(self._destination_stations) == 1:
-                    station_id = self._destination_stations[0]["value"]
-                    station_name = self._destination_stations[0]["label"]
-                    self._destination_station = {"id": station_id, "name": station_name}
-                    return await self.async_step_settings()
-                else:
-                    matching = next(
-                        (
-                            r
-                            for r in self._destination_stations
-                            if r["value"] == station_value
-                        ),
-                        None,
-                    )
-                    if matching:
-                        self._destination_station = {
-                            "id": matching["value"],
-                            "name": matching["label"],
-                        }
-                        return await self.async_step_settings()
+                self._destination_station = {"id": station_id, "name": station_name}
+                return await self.async_step_settings()
 
         return self.async_show_form(
             step_id="destination",
-            data_schema=self._get_station_schema(self._destination_stations),
+            data_schema=self._get_station_schema(self._all_stations),
             errors=errors,
             description_placeholders={"step": "destination"},
         )
