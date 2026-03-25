@@ -32,6 +32,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     destination = entry.data[CONF_DESTINATION]
 
     # Create coordinator
+    # Merge entry.data with entry.options (options override data)
+    config = {**entry.data, **entry.options}
     coordinator = CFLCommuteDataUpdateCoordinator(
         hass=hass,
         api=api,
@@ -39,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         origin_name=origin["name"],
         destination_id=destination["id"],
         destination_name=destination["name"],
-        config=dict(entry.data),
+        config=config,
     )
 
     # Fetch initial data
