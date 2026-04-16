@@ -216,10 +216,13 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
                         "train_number": d.train_number,
                         "departure_time": format_time(d.expected_departure),
                         "scheduled_departure": format_time(d.scheduled_departure),
+                        "expected_departure": format_time(d.expected_departure),
                         "delay_minutes": d.delay_minutes,
                         "is_cancelled": d.is_cancelled,
                         "platform": d.platform,
                         "direction": d.direction,
+                        "operator": d.operator,
+                        "calling_points": d.calling_points,
                     }
                     for d in self.departures
                 ],
