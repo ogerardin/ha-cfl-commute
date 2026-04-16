@@ -4,8 +4,34 @@ import pytest
 import aiohttp
 from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
-from custom_components.cfl_commute.api import CFLCommuteClient, Departure
+from custom_components.cfl_commute.api import (
+    CFLCommuteClient,
+    Departure,
+    _clean_station_name,
+)
 from custom_components.cfl_commute.util import format_time
+
+
+class TestCleanStationName:
+    """Test cases for _clean_station_name()."""
+
+    def test_strips_gare_suffix(self):
+        assert _clean_station_name("Esch-sur-Alzette, Gare") == "Esch-sur-Alzette"
+
+    def test_strips_gare_centrale_suffix(self):
+        assert _clean_station_name("Luxembourg, Gare Centrale") == "Luxembourg"
+
+    def test_case_insensitive_gare(self):
+        assert _clean_station_name("Arlon, gare") == "Arlon"
+
+    def test_no_suffix_unchanged(self):
+        assert _clean_station_name("Bettembourg") == "Bettembourg"
+
+    def test_belval_with_parentheses(self):
+        assert _clean_station_name("Belval (Université), Gare") == "Belval (Université)"
+
+    def test_strips_trailing_whitespace(self):
+        assert _clean_station_name("Rodange, Gare  ") == "Rodange"
 
 
 class TestCFLCommuteClientSession:
@@ -165,7 +191,7 @@ class TestCFLCommuteClient:
             stations = await client.search_stations("Esch")
 
         assert len(stations) == 1
-        assert stations[0].name == "Esch-sur-Alzette, Gare"
+        assert stations[0].name == "Esch-sur-Alzette"
 
     @pytest.mark.asyncio
     async def test_get_departures_filters_non_rail(self):

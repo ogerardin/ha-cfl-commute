@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -77,6 +78,15 @@ def _normalize_platform(platform):
     if platform and platform != "n/a":
         return str(platform)
     return ""
+
+
+def _clean_station_name(name: str) -> str:
+    """Remove redundant ', Gare' suffixes from station names.
+
+    The CFL API appends ', Gare' or ', Gare Centrale' to station names,
+    which is redundant since all entries are train stations.
+    """
+    return re.sub(r",\s*Gare\b.*$", "", name, flags=re.IGNORECASE).strip()
 
 
 class CFLCommuteClient:
@@ -244,7 +254,7 @@ class CFLCommuteClient:
             stations.append(
                 Station(
                     id=station_id,
-                    name=name,
+                    name=_clean_station_name(name),
                     lon=float(stop.get("lon", 0)),
                     lat=float(stop.get("lat", 0)),
                 )
@@ -335,7 +345,7 @@ class CFLCommuteClient:
             )
 
             # Get direction
-            direction = dep.get("direction", "")
+            direction = _clean_station_name(dep.get("direction", ""))
 
             # Get all stops for this journey (when passlist=1 is used)
             stops = dep.get("Stops", {}).get("Stop", [])
@@ -351,7 +361,7 @@ class CFLCommuteClient:
                 if stop_id:
                     stop_ids.append(stop_id)
                 if stop_name:
-                    stop_names.append(stop_name)
+                    stop_names.append(_clean_station_name(stop_name))
 
             departures.append(
                 Departure(
@@ -469,7 +479,7 @@ class CFLCommuteClient:
                 calling_points.append(
                     {
                         "id": stop_id,
-                        "name": stop.get("name", ""),
+                        "name": _clean_station_name(stop.get("name", "")),
                         "arr_time": stop.get("arrTime", stop.get("depTime", "")),
                     }
                 )
@@ -484,4 +494,8 @@ class CFLCommuteClient:
         stops = dep.get("Stops", {}).get("Stop", [])
         if isinstance(stops, dict):
             stops = [stops]
-        return [stop.get("name", "") for stop in stops if stop.get("name")]
+        return [
+            _clean_station_name(stop.get("name", ""))
+            for stop in stops
+            if stop.get("name")
+        ]
