@@ -53,8 +53,11 @@ def filter_departed_trains(
     grace_period_seconds = grace_period_minutes * 60
     filtered = []
 
-    now_lux = now_utc.astimezone(LUXEMBOURG_TZ)
-    now_lux_naive = now_lux.replace(tzinfo=None)
+    if now_utc.tzinfo is None:
+        now_lux_naive = now_utc
+    else:
+        now_lux = now_utc.astimezone(LUXEMBOURG_TZ)
+        now_lux_naive = now_lux.replace(tzinfo=None)
 
     for dep in departures:
         if dep.is_cancelled:
