@@ -6,6 +6,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_NUM_TRAINS,
@@ -24,8 +25,9 @@ PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up CFL Commute from a config entry."""
-    # Create API client
-    api = CFLCommuteClient(entry.data[CONF_API_KEY])
+    # Use Home Assistant's managed session for proper lifecycle management
+    session = async_get_clientsession(hass)
+    api = CFLCommuteClient(entry.data[CONF_API_KEY], session=session)
 
     # Get station info
     origin = entry.data[CONF_ORIGIN]
@@ -56,6 +58,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Forward to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Register update listener for options changes
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
     return True
 
 
@@ -64,11 +70,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        entry_data = hass.data[DOMAIN].pop(entry.entry_id, None)
-        if entry_data:
-            api = entry_data.get("api")
-            if api:
-                await api.close()
+        hass.data[DOMAIN].pop(entry.entry_id, None)
 
     return unload_ok
 

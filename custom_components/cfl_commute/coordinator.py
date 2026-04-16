@@ -9,14 +9,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .api import CFLCommuteClient, Departure
+from .api import CFLCommuteClient, Departure, RateLimitExceeded
 from .const import (
+    CONF_DEPARTED_TRAIN_GRACE_PERIOD,
     CONF_MAJOR_THRESHOLD,
     CONF_MINOR_THRESHOLD,
     CONF_NIGHT_UPDATES,
     CONF_NUM_TRAINS,
     CONF_SEVERE_THRESHOLD,
     CONF_TIME_WINDOW,
+    DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD,
     DEFAULT_MAJOR_THRESHOLD,
     DEFAULT_MINOR_THRESHOLD,
     DEFAULT_SEVERE_THRESHOLD,
@@ -55,6 +57,13 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
         self.config = config
         self.time_window = config.get(CONF_TIME_WINDOW, 60)
         self.night_updates_enabled = config.get(CONF_NIGHT_UPDATES, False)
+        self.departed_train_grace_period = int(
+            config.get(
+                CONF_DEPARTED_TRAIN_GRACE_PERIOD, DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD
+            )
+        )
+        self._failed_updates = 0
+        self._max_failed_updates = 3
         self._update_lock = asyncio.Lock()
 
         minor_threshold = config.get(CONF_MINOR_THRESHOLD, DEFAULT_MINOR_THRESHOLD)
@@ -133,7 +142,7 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
         if self.time_window == 0:
             return departures
 
-        grace_period_seconds = 120
+        grace_period_seconds = self.departed_train_grace_period * 60
         filtered = []
 
         now_lux = now.astimezone(LUXEMBOURG_TZ)
@@ -183,7 +192,22 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
         return filtered
 
     async def _async_update_data(self) -> list[Departure]:
-        """Fetch data from CFL API."""
+        """Fetch data from CFL API.
+
+        Returns stale data for transient failures up to _max_failed_updates
+        consecutive failures, then raises UpdateFailed.
+        """
+        # Update interval with lock
+        async with self._update_lock:
+            new_interval = self._get_update_interval()
+            if new_interval != self.update_interval:
+                _LOGGER.debug(
+                    "Updating interval from %s to %s",
+                    self.update_interval,
+                    new_interval,
+                )
+                self.update_interval = new_interval
+
         try:
             now = dt_util.now()
             now_lux = datetime.now(LUXEMBOURG_TZ)
@@ -198,7 +222,6 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
                 time_str,
             )
 
-            # Fetch departures with passlist to get all stops
             departures = await self.api.get_departures(
                 self.origin_id,
                 time_window=self.time_window,
@@ -220,7 +243,6 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
             # Filter departures by destination (using name matching for robustness)
             filtered_departures = []
             for dep in departures:
-                # Check if destination name is in the journey's calling points
                 calling_point_names = [name.lower() for name in dep.calling_points]
                 dest_name_lower = self.destination_name.lower()
                 if any(dest_name_lower in cp for cp in calling_point_names):
@@ -257,14 +279,22 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
             num_trains = self.config.get(CONF_NUM_TRAINS, 3)
             filtered_departures = filtered_departures[:num_trains]
 
-            # Update interval with lock
-            async with self._update_lock:
-                self.update_interval = self._get_update_interval()
+            # Reset failure counter on success
+            self._failed_updates = 0
 
             return filtered_departures
 
+        except RateLimitExceeded as err:
+            _LOGGER.error(
+                "CFL API rate limit exceeded. Consider reducing update frequency."
+            )
+            self._failed_updates += 1
+            raise UpdateFailed(f"Rate limit exceeded: {err}") from err
+
         except Exception as err:
+            self._failed_updates += 1
             error_msg = str(err)
+
             if "quota" in error_msg.lower() or "QuotaExceeded" in error_msg:
                 _LOGGER.error(
                     "CFL mobiliteit.lu API quota exceeded. "
@@ -272,6 +302,25 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
                     "Consider requesting increased quota from opendata-api@atp.etat.lu"
                 )
             else:
-                _LOGGER.error("Error fetching CFL data: %s", err)
+                _LOGGER.warning(
+                    "Failed to fetch CFL data (attempt %d/%d): %s",
+                    self._failed_updates,
+                    self._max_failed_updates,
+                    err,
+                )
 
-            raise UpdateFailed(f"Failed to fetch data: {err}") from err
+            # If we have stale data and haven't exceeded max failures, return it
+            if self._failed_updates < self._max_failed_updates:
+                if self.data:
+                    _LOGGER.info(
+                        "Using cached data after failed update (attempt %d/%d)",
+                        self._failed_updates,
+                        self._max_failed_updates,
+                    )
+                    return self.data
+                _LOGGER.warning("No cached data available after failed update")
+
+            # Max failures exceeded or no cached data
+            raise UpdateFailed(
+                f"Failed to fetch data after {self._failed_updates} attempts: {err}"
+            ) from err

@@ -1,10 +1,52 @@
 """Tests for CFL Commute API client."""
 
 import pytest
+import aiohttp
 from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
 from custom_components.cfl_commute.api import CFLCommuteClient, Departure
 from custom_components.cfl_commute.util import format_time
+
+
+class TestCFLCommuteClientSession:
+    """Test cases for CFLCommuteClient session handling."""
+
+    def test_client_creates_default_session_when_none(self):
+        """Client should create its own session when none is provided (backward compat)."""
+        client = CFLCommuteClient("test_key")
+        assert client._session is None
+        assert client._owns_session is True
+
+    def test_client_accepts_external_session(self):
+        """Client should accept an aiohttp.ClientSession via constructor."""
+        mock_session = MagicMock(spec=aiohttp.ClientSession)
+        client = CFLCommuteClient("test_key", session=mock_session)
+        assert client._session is mock_session
+        assert client._owns_session is False
+
+    @pytest.mark.asyncio
+    async def test_close_with_own_session(self):
+        """Closing client with own session should close it."""
+        mock_session = MagicMock()
+        mock_session.closed = False
+        mock_session.close = AsyncMock()
+        # Simulate _owns_session by using internal method
+        client = CFLCommuteClient("test_key")
+        client._session = mock_session
+        client._owns_session = True
+        await client.close()
+        mock_session.close.assert_called_once()
+        assert client._session is None
+
+    @pytest.mark.asyncio
+    async def test_close_with_external_session_is_noop(self):
+        """Closing client with external session should not close the session."""
+        mock_session = MagicMock(spec=aiohttp.ClientSession)
+        mock_session.closed = False
+        client = CFLCommuteClient("test_key", session=mock_session)
+        await client.close()
+        mock_session.close.assert_not_called()
+        assert client._session is None
 
 
 class TestCFLCommuteClient:

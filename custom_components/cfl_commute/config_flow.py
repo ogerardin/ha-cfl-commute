@@ -20,12 +20,16 @@ from .const import (
     CONF_MAJOR_THRESHOLD,
     CONF_SEVERE_THRESHOLD,
     CONF_NIGHT_UPDATES,
+    CONF_DEPARTED_TRAIN_GRACE_PERIOD,
     DEFAULT_TIME_WINDOW,
     DEFAULT_NUM_TRAINS,
     DEFAULT_MINOR_THRESHOLD,
     DEFAULT_MAJOR_THRESHOLD,
     DEFAULT_SEVERE_THRESHOLD,
     DEFAULT_NIGHT_UPDATES,
+    DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD,
+    MIN_GRACE_PERIOD,
+    MAX_GRACE_PERIOD,
     DOMAIN,
 )
 
@@ -61,6 +65,7 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._major_threshold: int | None = None
         self._severe_threshold: int | None = None
         self._night_updates: bool | None = None
+        self._departed_train_grace_period: int | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -206,6 +211,9 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._night_updates = user_input.get(
                 CONF_NIGHT_UPDATES, DEFAULT_NIGHT_UPDATES
             )
+            self._departed_train_grace_period = user_input.get(
+                CONF_DEPARTED_TRAIN_GRACE_PERIOD, DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD
+            )
 
             return await self.async_step_return_journey()
 
@@ -245,6 +253,14 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         default=DEFAULT_SEVERE_THRESHOLD,
                         description="Severe Disruption Threshold (min)",
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                    vol.Required(
+                        CONF_DEPARTED_TRAIN_GRACE_PERIOD,
+                        default=DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD,
+                        description="Departed Train Grace Period (min)",
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(min=MIN_GRACE_PERIOD, max=MAX_GRACE_PERIOD),
+                    ),
                     vol.Required(
                         CONF_NIGHT_UPDATES,
                         default=DEFAULT_NIGHT_UPDATES,
@@ -287,6 +303,7 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_MAJOR_THRESHOLD: self._major_threshold,
                             CONF_SEVERE_THRESHOLD: self._severe_threshold,
                             CONF_NIGHT_UPDATES: self._night_updates,
+                            CONF_DEPARTED_TRAIN_GRACE_PERIOD: self._departed_train_grace_period,
                         },
                     )
                 )
@@ -333,6 +350,7 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_MAJOR_THRESHOLD: self._major_threshold,
                 CONF_SEVERE_THRESHOLD: self._severe_threshold,
                 CONF_NIGHT_UPDATES: self._night_updates,
+                CONF_DEPARTED_TRAIN_GRACE_PERIOD: self._departed_train_grace_period,
             },
         )
 
@@ -401,6 +419,17 @@ class CFLCommuteOptionsFlow(config_entries.OptionsFlow):
                     ),
                     description="Severe Disruption Threshold (min)",
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                vol.Required(
+                    CONF_DEPARTED_TRAIN_GRACE_PERIOD,
+                    default=current_options.get(
+                        CONF_DEPARTED_TRAIN_GRACE_PERIOD,
+                        DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD,
+                    ),
+                    description="Departed Train Grace Period (min)",
+                ): vol.All(
+                    vol.Coerce(int),
+                    vol.Range(min=MIN_GRACE_PERIOD, max=MAX_GRACE_PERIOD),
+                ),
                 vol.Required(
                     CONF_NIGHT_UPDATES,
                     default=current_options.get(

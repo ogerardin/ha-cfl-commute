@@ -24,6 +24,11 @@ CONF_MAJOR_THRESHOLD = "major_threshold"
 CONF_SEVERE_THRESHOLD = "severe_threshold"
 CONF_NIGHT_UPDATES = "night_updates"
 CONF_ADD_RETURN_JOURNEY = "add_return_journey"
+CONF_DEPARTED_TRAIN_GRACE_PERIOD = "departed_train_grace_period"
+
+DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD = 2  # minutes
+MIN_GRACE_PERIOD = 0  # minutes
+MAX_GRACE_PERIOD = 15  # minutes
 
 STATUS_NORMAL = "Normal"
 STATUS_MINOR = "Minor Delays"

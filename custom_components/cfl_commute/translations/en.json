@@ -35,6 +35,7 @@
           "minor_threshold": "Minor Delays Threshold (min)",
           "major_threshold": "Major Delays Threshold (min)",
           "severe_threshold": "Severe Disruption Threshold (min)",
+          "departed_train_grace_period": "Departed Train Grace Period (min)",
           "night_updates": "Enable Night Updates"
         },
         "data_description": {
@@ -43,6 +44,7 @@
           "minor_threshold": "Minutes of delay for Minor Delays status",
           "major_threshold": "Minutes of delay for Major Delays status",
           "severe_threshold": "Minutes of delay for Severe Disruption status",
+          "departed_train_grace_period": "Minutes after departure to keep showing train (0-15)",
           "night_updates": "Keep polling during night hours (23:00-05:00)"
         }
       },
@@ -67,6 +69,7 @@
           "minor_threshold": "Minor Delays Threshold (min)",
           "major_threshold": "Major Delays Threshold (min)",
           "severe_threshold": "Severe Disruption Threshold (min)",
+          "departed_train_grace_period": "Departed Train Grace Period (min)",
           "night_updates": "Enable Night Updates"
         },
         "data_description": {
@@ -75,6 +78,7 @@
           "minor_threshold": "Minutes of delay for Minor Delays status",
           "major_threshold": "Minutes of delay for Major Delays status",
           "severe_threshold": "Minutes of delay for Severe Disruption status",
+          "departed_train_grace_period": "Minutes after departure to keep showing train (0-15)",
           "night_updates": "Keep polling during night hours (23:00-05:00)"
         }
       }

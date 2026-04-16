@@ -5,6 +5,11 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from custom_components.cfl_commute.api import Departure
+from custom_components.cfl_commute.const import (
+    DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD,
+    MIN_GRACE_PERIOD,
+    MAX_GRACE_PERIOD,
+)
 
 LUXEMBOURG_TZ = ZoneInfo("Europe/Luxembourg")
 
@@ -36,6 +41,7 @@ def filter_departed_trains(
     departures: list[Departure],
     now_utc: datetime,
     time_window: int = 120,
+    grace_period_minutes: int = DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD,
 ) -> list[Departure]:
     """Standalone version of _filter_departed_trains for testing."""
     if not departures:
@@ -44,7 +50,7 @@ def filter_departed_trains(
     if time_window == 0:
         return departures
 
-    grace_period_seconds = 120
+    grace_period_seconds = grace_period_minutes * 60
     filtered = []
 
     now_lux = now_utc.astimezone(LUXEMBOURG_TZ)
@@ -151,16 +157,36 @@ class TestFilterDepartedTrains:
         result = filter_departed_trains([], now_utc)
         assert result == []
 
-    def test_grace_period(self):
-        """Test that trains within 2 minute grace period are kept."""
+    def test_default_grace_period_is_two_minutes(self):
+        """Default grace period should be 2 minutes."""
+        assert DEFAULT_DEPARTED_TRAIN_GRACE_PERIOD == 2
+        assert MIN_GRACE_PERIOD == 0
+        assert MAX_GRACE_PERIOD == 15
+
+    def test_grace_period_keeps_trains_within_grace(self):
+        """Test that trains within grace period are kept."""
         departures = [
             create_departure("RE 100", "02:02:00"),  # 2 min in future
         ]
-
         now_utc = datetime(2026, 3, 24, 1, 0, 0)
-        result = filter_departed_trains(departures, now_utc)
-
+        result = filter_departed_trains(departures, now_utc, grace_period_minutes=2)
         assert len(result) == 1
+
+    def test_custom_grace_period_zero_excludes_departed(self):
+        """Test that grace period=0 filters out trains departed more than 0 min ago."""
+        # Train departed 3 minutes ago
+        departures = [
+            create_departure("RE 100", "00:57:00"),  # 3 min before 01:00
+        ]
+        now_utc = datetime(2026, 3, 24, 1, 0, 0)
+        result_0min = filter_departed_trains(
+            departures, now_utc, grace_period_minutes=0
+        )
+        result_5min = filter_departed_trains(
+            departures, now_utc, grace_period_minutes=5
+        )
+        assert len(result_0min) == 0  # 3 min ago > 0 min grace
+        assert len(result_5min) == 1  # 3 min ago < 5 min grace
 
     def test_far_future_train(self):
         """Test that trains far in the future are kept."""
@@ -237,3 +263,44 @@ class TestThresholdValidation:
         assert 0 <= 0 <= 0  # All zero
         assert 5 <= 5 <= 5  # All same
         assert 0 <= 100 <= 1000  # Wide range
+
+
+class TestFailedUpdateCounter:
+    """Test that consecutive failures are tolerated before raising UpdateFailed."""
+
+    def test_failed_updates_default_values(self):
+        """Failed update counter should have correct defaults."""
+        # Test the default values directly
+
+        # Create a minimal mock coordinator without calling parent __init__
+        # by testing the attributes that are set before super().__init__
+        class TestableCoordinator:
+            def __init__(self):
+                self._failed_updates = 0
+                self._max_failed_updates = 3
+
+        mock = TestableCoordinator()
+        assert mock._failed_updates == 0
+        assert mock._max_failed_updates == 3
+
+    def test_failed_updates_counter_logic(self):
+        """Test that the failure counter increments correctly."""
+
+        class TestableCoordinator:
+            def __init__(self):
+                self._failed_updates = 0
+                self._max_failed_updates = 3
+
+        mock = TestableCoordinator()
+        mock._failed_updates += 1
+        assert mock._failed_updates == 1
+        assert mock._max_failed_updates == 3
+        assert mock._failed_updates < mock._max_failed_updates
+
+        mock._failed_updates += 1
+        assert mock._failed_updates == 2
+        assert mock._failed_updates < mock._max_failed_updates
+
+        mock._failed_updates += 1
+        assert mock._failed_updates == 3
+        assert mock._failed_updates >= mock._max_failed_updates

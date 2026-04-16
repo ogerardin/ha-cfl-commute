@@ -91,10 +91,17 @@ class CFLCommuteClient:
     # Include bus operators for stations that only have bus data
     BUS_OPERATORS = {"AVL", "RGTR", "TICE", "Bus"}
 
-    def __init__(self, api_key: str):
-        """Initialize the client."""
+    def __init__(self, api_key: str, session: aiohttp.ClientSession | None = None):
+        """Initialize the client.
+
+        Args:
+            api_key: CFL mobiliteit.lu API key.
+            session: Optional aiohttp session. If None, one will be created on first request.
+                     Pass HA's managed session via async_get_clientsession(hass) for proper lifecycle.
+        """
         self._api_key = api_key
-        self._session: aiohttp.ClientSession | None = None
+        self._session = session
+        self._owns_session = session is None
         self._rate_limit_calls_minute: list[float] = []
         self._rate_limit_calls_hour: list[float] = []
 
@@ -102,6 +109,7 @@ class CFLCommuteClient:
         """Get or create aiohttp session."""
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession()
+            self._owns_session = True
         return self._session
 
     def _cleanup_rate_limit_calls(self) -> None:
@@ -155,11 +163,15 @@ class CFLCommuteClient:
         self._rate_limit_calls_hour.append(now)
 
     async def close(self) -> None:
-        """Close the aiohttp session."""
-        if self._session and not self._session.closed:
+        """Close the aiohttp session if we own it.
+
+        Only closes sessions we created. External sessions (e.g. from
+        async_get_clientsession) are managed by Home Assistant.
+        """
+        if self._owns_session and self._session and not self._session.closed:
             await self._session.close()
-            self._session = None
             await asyncio.sleep(0.25)
+        self._session = None
 
     async def _request(self, url: str, params: dict[str, str] | None = None) -> dict:
         """Make an API request."""

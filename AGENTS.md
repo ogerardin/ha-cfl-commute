@@ -271,6 +271,8 @@ git commit -m "test: add integration tests for real API"
 
 ### Releases
 
+> **Important:** Do NOT prefix release tags with `v` (use `1.3.2`, not `v1.3.2`).
+
 To make a release:
 
 1. **Update version** in `custom_components/cfl_commute/manifest.json`
@@ -278,12 +280,12 @@ To make a release:
    ```bash
    cd custom_components && zip -r ../cfl_commute.zip cfl_commute && cd ..
    ```
-3. **Create git tag** with the same version:
+3. **Create git tag** with the same version (no `v` prefix):
    ```bash
    git tag -a 1.3.2 -m "Release 1.3.2"
    git push origin main --tags
    ```
-4. **Create GitHub release**:
+4. **Create GitHub release** (no `v` prefix):
    ```bash
    gh release create 1.3.2 --title "Release 1.3.2" --notes "Changes in this release..."
    ```
