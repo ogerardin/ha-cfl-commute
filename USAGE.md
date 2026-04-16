@@ -63,7 +63,17 @@ Each configured commute creates multiple sensors
   - `origin_id`/`destination_id`: Station IDs
   - `on_time_count`/`delayed_count`/`cancelled_count`: Train counts
   - `total_trains`: Total trains found
-  - `all_trains`: Array of all tracked trains with number, times, platform, delay, cancelled status
+  - `all_trains`: Array of all tracked trains, each containing:
+    - `train_number`: Train identifier (e.g., "RE 4632")
+    - `departure_time`: Expected departure time (HH:MM)
+    - `scheduled_departure`: Scheduled departure time (HH:MM)
+    - `expected_departure`: Expected departure time including delays (HH:MM)
+    - `delay_minutes`: Minutes of delay
+    - `is_cancelled`: Whether the train is cancelled
+    - `platform`: Platform number (may be a string or object from HAFAS API)
+    - `direction`: Train's final destination station
+    - `operator`: Train operating company (e.g., "CFL")
+    - `calling_points`: List of intermediate stop names
 
 ### 2. Commute Status Sensor
 
