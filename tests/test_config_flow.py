@@ -268,7 +268,7 @@ class TestStationSelection:
             {"value": "200417010", "label": "Esch-sur-Alzette"},
         ]
 
-        result = await flow.async_step_origin({"station": "200405060"})
+        result = await flow.async_step_origin({"station": "Luxembourg"})
 
         assert result["step_id"] == "destination"
         assert flow._origin_station == {"id": "200405060", "name": "Luxembourg"}
@@ -283,7 +283,7 @@ class TestStationSelection:
         ]
         flow._origin_station = {"id": "200405060", "name": "Luxembourg"}
 
-        result = await flow.async_step_destination({"station": "200417010"})
+        result = await flow.async_step_destination({"station": "Esch-sur-Alzette"})
 
         assert result["step_id"] == "settings"
         assert flow._destination_station == {
