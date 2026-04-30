@@ -195,7 +195,7 @@ class TestCFLCommuteClient:
 
     @pytest.mark.asyncio
     async def test_get_departures_filters_non_rail(self):
-        """Test that only rail operators are returned."""
+        """Test that both train and bus operators are returned."""
         client = CFLCommuteClient("test_api_key")
 
         mock_response = {
@@ -206,8 +206,8 @@ class TestCFLCommuteClient:
                         "catOut": "RB",
                         "operatorInfo": {"nameS": "CFL"},
                     },
-                    "time": "10:00",
-                    "rtTime": "10:00",
+                    "time": "23:00",  # Far future time to pass time filter
+                    "rtTime": "23:00",
                     "direction": "Test",
                     "num": "1234",
                 },
@@ -217,8 +217,8 @@ class TestCFLCommuteClient:
                         "catOut": "Bus",
                         "operatorInfo": {"nameS": "AVL"},
                     },
-                    "time": "10:05",
-                    "rtTime": "10:05",
+                    "time": "23:05",  # Far future time to pass time filter
+                    "rtTime": "23:05",
                     "direction": "Test",
                     "num": "",
                 },
