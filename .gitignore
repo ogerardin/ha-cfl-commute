@@ -9,3 +9,4 @@ __pycache__/
 !brand/icon.png
 .playwright-mcp/
 cfl_commute.zip
+home-assistant*.log

@@ -219,3 +219,7 @@ automation:
 - Check your update interval settings
 - If during night hours, ensure "Enable Night-Time Updates" is on
 - Verify network connectivity
+
+## Companion Card
+
+For a richer visual dashboard experience, install the [CFL Commute Card](https://github.com/ogerardin/lovelace-cfl-commute-card) Lovelace card.
