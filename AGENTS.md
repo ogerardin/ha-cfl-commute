@@ -276,20 +276,16 @@ git commit -m "test: add integration tests for real API"
 To make a release:
 
 1. **Update version** in `custom_components/cfl_commute/manifest.json`
-2. **Zip the integration**:
+2. **Zip the integration** (files at root, no wrapper directory):
    ```bash
-   cd custom_components && zip -r ../cfl_commute.zip cfl_commute && cd ..
+   cd custom_components/cfl_commute && zip -r ../../cfl_commute.zip . -x "__pycache__/*" ".DS_Store" && cd ../..
    ```
 3. **Create git tag** with the same version (no `v` prefix):
    ```bash
    git tag -a 1.3.2 -m "Release 1.3.2"
    git push origin main --tags
    ```
-4. **Create GitHub release** (no `v` prefix):
+4. **Create GitHub release and upload zip asset** (no `v` prefix):
    ```bash
-   gh release create 1.3.2 --title "Release 1.3.2" --notes "Changes in this release..."
-   ```
-5. **Upload the zip asset**:
-   ```bash
-   gh release upload 1.3.2 cfl_commute.zip
+   gh release create 1.3.2 --title "Release 1.3.2" --notes "Changes in this release..." cfl_commute.zip
    ```
