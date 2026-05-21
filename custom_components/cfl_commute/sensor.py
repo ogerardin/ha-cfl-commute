@@ -213,7 +213,8 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
                 "total_trains": len(self.departures),
                 "all_trains": [
                     {
-                        "train_number": d.train_number,
+                        "train_number": i + 1,
+                        "service_id": d.train_number,
                         "departure_time": format_time(d.expected_departure),
                         "scheduled_departure": format_time(d.scheduled_departure),
                         "expected_departure": format_time(d.expected_departure),
@@ -224,7 +225,7 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
                         "operator": d.operator,
                         "calling_points": d.calling_points,
                     }
-                    for d in self.departures
+                    for i, d in enumerate(self.departures)
                 ],
             }
         )
@@ -345,7 +346,8 @@ class CFLCommuteNextTrainSensor(CFLCommuteBaseSensor):
             train = self.departures[0]
             attrs.update(
                 {
-                    "train_number": train.train_number,
+                    "train_number": 1,
+                    "service_id": train.train_number,
                     "total_trains": len(self.departures),
                     "departure_time": format_time(train.expected_departure),
                     "scheduled_departure": format_time(train.scheduled_departure),
@@ -409,7 +411,8 @@ class CFLCommuteTrainSensor(CFLCommuteBaseSensor):
             train = self.departures[self._train_number - 1]
             attrs.update(
                 {
-                    "train_number": train.train_number,
+                    "train_number": self._train_number,
+                    "service_id": train.train_number,
                     "total_trains": len(self.departures),
                     "departure_time": format_time(train.expected_departure),
                     "scheduled_departure": format_time(train.scheduled_departure),
