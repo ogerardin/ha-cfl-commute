@@ -20,6 +20,12 @@ from .const import (
     ATTR_ON_TIME_PCT_30D,
     ATTR_ON_TIME_PCT_7D,
     ATTR_ON_TIME_PCT_TODAY,
+    ATTR_REVERSE_AVG_DELAY_7D,
+    ATTR_REVERSE_BEST_DAY,
+    ATTR_REVERSE_ON_TIME_PCT_30D,
+    ATTR_REVERSE_ON_TIME_PCT_7D,
+    ATTR_REVERSE_ON_TIME_PCT_TODAY,
+    ATTR_REVERSE_WORST_DAY,
     ATTR_TOTAL_OBSERVATIONS_TODAY,
     ATTR_WORST_DAY,
     CONF_COMMUTE_NAME,
@@ -187,7 +193,7 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
     def state(self) -> StateType:
         """Return the state of the sensor."""
         if not self.departures:
-            return "No train"
+            return "No trains"
 
         on_time = sum(
             1
@@ -252,6 +258,51 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
                 ],
             }
         )
+
+        # Include historical stats so the card can read them directly from this
+        # entity without needing a separate lookup
+        store = self.coordinator.stats_store
+        if store is not None:
+            today = store.get_today_stats()
+            rolling_7 = store.get_rolling_stats(7)
+            rolling_30 = store.get_rolling_stats(30)
+            best_worst = store.get_best_and_worst_days(30)
+            attrs[ATTR_ON_TIME_PCT_TODAY] = today.get("on_time_pct")
+            attrs[ATTR_ON_TIME_PCT_7D] = rolling_7["on_time_pct"]
+            attrs[ATTR_ON_TIME_PCT_30D] = rolling_30["on_time_pct"]
+            attrs[ATTR_AVG_DELAY_7D] = rolling_7["avg_delay_minutes"]
+            attrs[ATTR_WORST_DAY] = best_worst["worst_day"]
+            attrs[ATTR_BEST_DAY] = best_worst["best_day"]
+
+        # Expose the paired reverse route's stats so that a card configured with
+        # only this entity still has access to both directions' stats when toggled.
+        if self.hass is not None and DOMAIN in self.hass.data:
+            rev_entry = next(
+                (
+                    entry_data
+                    for entry_data in self.hass.data[DOMAIN].values()
+                    if isinstance(entry_data, dict)
+                    and entry_data.get("coordinator") is not None
+                    and entry_data["coordinator"] is not self.coordinator
+                    and entry_data["coordinator"].origin_id == self._destination_id
+                    and entry_data["coordinator"].destination_id == self._origin_id
+                ),
+                None,
+            )
+            if rev_entry is not None:
+                rev_coordinator = rev_entry["coordinator"]
+                if rev_coordinator.stats_store is not None:
+                    rev_store = rev_coordinator.stats_store
+                    rev_today = rev_store.get_today_stats()
+                    rev_7 = rev_store.get_rolling_stats(7)
+                    rev_30 = rev_store.get_rolling_stats(30)
+                    rev_bw = rev_store.get_best_and_worst_days(30)
+                    attrs[ATTR_REVERSE_ON_TIME_PCT_TODAY] = rev_today.get("on_time_pct")
+                    attrs[ATTR_REVERSE_ON_TIME_PCT_7D] = rev_7["on_time_pct"]
+                    attrs[ATTR_REVERSE_ON_TIME_PCT_30D] = rev_30["on_time_pct"]
+                    attrs[ATTR_REVERSE_AVG_DELAY_7D] = rev_7["avg_delay_minutes"]
+                    attrs[ATTR_REVERSE_WORST_DAY] = rev_bw["worst_day"]
+                    attrs[ATTR_REVERSE_BEST_DAY] = rev_bw["best_day"]
 
         return attrs
 
