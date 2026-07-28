@@ -292,11 +292,13 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
             # Record observation in historical stats store
             if self.stats_store is not None and filtered_departures:
                 on_time_count = sum(
-                    1 for d in filtered_departures
+                    1
+                    for d in filtered_departures
                     if not d.is_cancelled and d.delay_minutes == 0
                 )
                 delayed_count = sum(
-                    1 for d in filtered_departures
+                    1
+                    for d in filtered_departures
                     if not d.is_cancelled and d.delay_minutes > 0
                 )
                 cancelled_count = sum(1 for d in filtered_departures if d.is_cancelled)
@@ -310,19 +312,23 @@ class CFLCommuteDataUpdateCoordinator(DataUpdateCoordinator[list[Departure]]):
                         status = STATUS_DELAYED
                     else:
                         status = STATUS_ON_TIME
-                    services.append({
-                        "status": status,
-                        "delay_minutes": d.delay_minutes,
-                        "is_cancelled": d.is_cancelled,
-                    })
+                    services.append(
+                        {
+                            "status": status,
+                            "delay_minutes": d.delay_minutes,
+                            "is_cancelled": d.is_cancelled,
+                        }
+                    )
 
-                await self.stats_store.async_record_observation({
-                    "on_time_count": on_time_count,
-                    "delayed_count": delayed_count,
-                    "cancelled_count": cancelled_count,
-                    "services_tracked": services_tracked,
-                    "services": services,
-                })
+                await self.stats_store.async_record_observation(
+                    {
+                        "on_time_count": on_time_count,
+                        "delayed_count": delayed_count,
+                        "cancelled_count": cancelled_count,
+                        "services_tracked": services_tracked,
+                        "services": services,
+                    }
+                )
 
             return filtered_departures
 

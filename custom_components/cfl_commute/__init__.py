@@ -74,6 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Register domain-wide service (only once across all entries)
     if not hass.services.has_service(DOMAIN, SERVICE_GET_HISTORICAL_RAW_DATA):
+
         async def _handle_get_historical_raw_data(call: ServiceCall) -> dict:
             entry_id = call.data["entry_id"]
             if entry_id not in hass.data.get(DOMAIN, {}):

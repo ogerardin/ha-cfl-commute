@@ -40,17 +40,22 @@ class CFLCommuteStatisticsStore:
     async def async_record_observation(self, parsed_data: dict[str, Any]) -> None:
         """Accumulate today's observation from a coordinator update and persist."""
         if parsed_data.get("services_tracked", 0) == 0:
-            _LOGGER.debug("Skipping stats recording: no services tracked in this update")
+            _LOGGER.debug(
+                "Skipping stats recording: no services tracked in this update"
+            )
             return
 
         today_key = dt_util.now().date().isoformat()
-        day = self._data.get(today_key, {
-            "on_time_count": 0,
-            "delayed_count": 0,
-            "cancelled_count": 0,
-            "total_observations": 0,
-            "total_delay_minutes": 0,
-        })
+        day = self._data.get(
+            today_key,
+            {
+                "on_time_count": 0,
+                "delayed_count": 0,
+                "cancelled_count": 0,
+                "total_observations": 0,
+                "total_delay_minutes": 0,
+            },
+        )
 
         on_time = parsed_data.get("on_time_count", 0)
         delayed = parsed_data.get("delayed_count", 0)
@@ -70,7 +75,9 @@ class CFLCommuteStatisticsStore:
         day["total_delay_minutes"] += total_delay
 
         total_obs = day["total_observations"]
-        day["on_time_pct"] = round(day["on_time_count"] / total_obs * 100, 2) if total_obs > 0 else 0.0
+        day["on_time_pct"] = (
+            round(day["on_time_count"] / total_obs * 100, 2) if total_obs > 0 else 0.0
+        )
         day["avg_delay_minutes"] = (
             round(day["total_delay_minutes"] / day["delayed_count"], 2)
             if day["delayed_count"] > 0
@@ -82,7 +89,10 @@ class CFLCommuteStatisticsStore:
         await self._store.async_save({"version": STORAGE_VERSION, "days": self._data})
         _LOGGER.debug(
             "Recorded stats for %s: on_time=%d delayed=%d cancelled=%d",
-            today_key, on_time, delayed, cancelled,
+            today_key,
+            on_time,
+            delayed,
+            cancelled,
         )
 
     def get_today_stats(self) -> dict[str, Any]:
@@ -101,11 +111,17 @@ class CFLCommuteStatisticsStore:
         total_on_time = sum(self._data[d]["on_time_count"] for d in days_with_data)
         total_obs = sum(self._data[d]["total_observations"] for d in days_with_data)
         total_delayed = sum(self._data[d]["delayed_count"] for d in days_with_data)
-        total_delay_min = sum(self._data[d]["total_delay_minutes"] for d in days_with_data)
+        total_delay_min = sum(
+            self._data[d]["total_delay_minutes"] for d in days_with_data
+        )
 
         return {
-            "on_time_pct": round(total_on_time / total_obs * 100, 1) if total_obs > 0 else None,
-            "avg_delay_minutes": round(total_delay_min / total_delayed, 1) if total_delayed > 0 else None,
+            "on_time_pct": (
+                round(total_on_time / total_obs * 100, 1) if total_obs > 0 else None
+            ),
+            "avg_delay_minutes": (
+                round(total_delay_min / total_delayed, 1) if total_delayed > 0 else None
+            ),
             "days_with_data": len(days_with_data),
         }
 
@@ -113,7 +129,11 @@ class CFLCommuteStatisticsStore:
         """Return worst/best day (by on-time %) across the last `days` calendar days."""
         today = dt_util.now().date()
         window = [(today - timedelta(days=i)).isoformat() for i in range(days)]
-        candidates = {d: self._data[d] for d in window if d in self._data and self._data[d].get("total_observations", 0) > 0}
+        candidates = {
+            d: self._data[d]
+            for d in window
+            if d in self._data and self._data[d].get("total_observations", 0) > 0
+        }
 
         if not candidates:
             return {"worst_day": None, "best_day": None}
@@ -141,12 +161,16 @@ class CFLCommuteStatisticsStore:
         for i in range(days - 1, -1, -1):
             date_str = (today - timedelta(days=i)).isoformat()
             day = self._data.get(date_str)
-            result.append({
-                "date": date_str,
-                "on_time_pct": day.get("on_time_pct") if day else None,
-                "avg_delay_minutes": day.get("avg_delay_minutes") if day else None,
-                "total_observations": day.get("total_observations", 0) if day else 0,
-            })
+            result.append(
+                {
+                    "date": date_str,
+                    "on_time_pct": day.get("on_time_pct") if day else None,
+                    "avg_delay_minutes": day.get("avg_delay_minutes") if day else None,
+                    "total_observations": (
+                        day.get("total_observations", 0) if day else 0
+                    ),
+                }
+            )
         return result
 
     def get_raw_data(self) -> dict[str, Any]:
@@ -155,9 +179,13 @@ class CFLCommuteStatisticsStore:
 
     def _prune_old_entries(self) -> None:
         """Remove entries older than STATS_RETENTION_DAYS."""
-        cutoff = (dt_util.now().date() - timedelta(days=STATS_RETENTION_DAYS)).isoformat()
+        cutoff = (
+            dt_util.now().date() - timedelta(days=STATS_RETENTION_DAYS)
+        ).isoformat()
         stale = [key for key in self._data if key < cutoff]
         for key in stale:
             del self._data[key]
         if stale:
-            _LOGGER.debug("Pruned %d stale stats entries (older than %s)", len(stale), cutoff)
+            _LOGGER.debug(
+                "Pruned %d stale stats entries (older than %s)", len(stale), cutoff
+            )

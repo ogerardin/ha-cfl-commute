@@ -13,9 +13,7 @@ from custom_components.cfl_commute.statistics import CFLCommuteStatisticsStore
 def _make_store(load_return=None):
     """Return a CFLCommuteStatisticsStore with a mocked HA Store."""
     hass = MagicMock()
-    with patch(
-        "custom_components.cfl_commute.statistics.Store"
-    ) as MockStore:
+    with patch("custom_components.cfl_commute.statistics.Store") as MockStore:
         instance = MockStore.return_value
         instance.async_load = AsyncMock(return_value=load_return)
         instance.async_save = AsyncMock(return_value=None)
@@ -29,11 +27,21 @@ def _parsed_data(on_time=2, delayed=1, cancelled=0, services=None):
     if services is None:
         services = []
         for _ in range(on_time):
-            services.append({"status": "on_time", "delay_minutes": 0, "is_cancelled": False})
+            services.append(
+                {"status": "on_time", "delay_minutes": 0, "is_cancelled": False}
+            )
         for dm in range(delayed):
-            services.append({"status": "delayed", "delay_minutes": 5 * (dm + 1), "is_cancelled": False})
+            services.append(
+                {
+                    "status": "delayed",
+                    "delay_minutes": 5 * (dm + 1),
+                    "is_cancelled": False,
+                }
+            )
         for _ in range(cancelled):
-            services.append({"status": "cancelled", "delay_minutes": 0, "is_cancelled": True})
+            services.append(
+                {"status": "cancelled", "delay_minutes": 0, "is_cancelled": True}
+            )
     return {
         "on_time_count": on_time,
         "delayed_count": delayed,
@@ -54,10 +62,19 @@ async def test_load_no_data():
 @pytest.mark.asyncio
 async def test_load_existing_data():
     """async_load restores previously persisted data."""
-    existing = {"days": {"2026-05-17": {"on_time_count": 5, "delayed_count": 1,
-                                         "cancelled_count": 0, "total_observations": 6,
-                                         "total_delay_minutes": 10,
-                                         "on_time_pct": 83.33, "avg_delay_minutes": 10.0}}}
+    existing = {
+        "days": {
+            "2026-05-17": {
+                "on_time_count": 5,
+                "delayed_count": 1,
+                "cancelled_count": 0,
+                "total_observations": 6,
+                "total_delay_minutes": 10,
+                "on_time_pct": 83.33,
+                "avg_delay_minutes": 10.0,
+            }
+        }
+    }
     store = _make_store(load_return=existing)
     await store.async_load()
     assert "2026-05-17" in store._data
@@ -73,7 +90,9 @@ async def test_record_new_day():
     today = date.today().isoformat()
     with patch("custom_components.cfl_commute.statistics.dt_util") as mock_dt:
         mock_dt.now.return_value.date.return_value = date.fromisoformat(today)
-        await store.async_record_observation(_parsed_data(on_time=2, delayed=1, cancelled=0))
+        await store.async_record_observation(
+            _parsed_data(on_time=2, delayed=1, cancelled=0)
+        )
 
     assert today in store._data
     day = store._data[today]
@@ -93,8 +112,12 @@ async def test_record_same_day_accumulates():
 
     with patch("custom_components.cfl_commute.statistics.dt_util") as mock_dt:
         mock_dt.now.return_value.date.return_value = date.fromisoformat(today)
-        await store.async_record_observation(_parsed_data(on_time=2, delayed=1, cancelled=0))
-        await store.async_record_observation(_parsed_data(on_time=1, delayed=0, cancelled=1))
+        await store.async_record_observation(
+            _parsed_data(on_time=2, delayed=1, cancelled=0)
+        )
+        await store.async_record_observation(
+            _parsed_data(on_time=1, delayed=0, cancelled=1)
+        )
 
     day = store._data[today]
     assert day["on_time_count"] == 3
@@ -112,9 +135,15 @@ async def test_record_zero_services_skipped():
 
     with patch("custom_components.cfl_commute.statistics.dt_util") as mock_dt:
         mock_dt.now.return_value.date.return_value = date.fromisoformat(today)
-        await store.async_record_observation({"services_tracked": 0, "on_time_count": 0,
-                                               "delayed_count": 0, "cancelled_count": 0,
-                                               "services": []})
+        await store.async_record_observation(
+            {
+                "services_tracked": 0,
+                "on_time_count": 0,
+                "delayed_count": 0,
+                "cancelled_count": 0,
+                "services": [],
+            }
+        )
 
     assert today not in store._data
     store._store.async_save.assert_not_called()
@@ -156,12 +185,18 @@ def test_get_rolling_stats_with_data():
 
     store._data = {
         (today - timedelta(days=0)).isoformat(): {
-            "on_time_count": 8, "delayed_count": 2, "cancelled_count": 0,
-            "total_observations": 10, "total_delay_minutes": 20,
+            "on_time_count": 8,
+            "delayed_count": 2,
+            "cancelled_count": 0,
+            "total_observations": 10,
+            "total_delay_minutes": 20,
         },
         (today - timedelta(days=1)).isoformat(): {
-            "on_time_count": 6, "delayed_count": 4, "cancelled_count": 0,
-            "total_observations": 10, "total_delay_minutes": 40,
+            "on_time_count": 6,
+            "delayed_count": 4,
+            "cancelled_count": 0,
+            "total_observations": 10,
+            "total_delay_minutes": 40,
         },
     }
 
@@ -181,12 +216,18 @@ def test_get_rolling_stats_excludes_days_outside_window():
 
     store._data = {
         (today - timedelta(days=2)).isoformat(): {
-            "on_time_count": 5, "delayed_count": 0, "cancelled_count": 0,
-            "total_observations": 5, "total_delay_minutes": 0,
+            "on_time_count": 5,
+            "delayed_count": 0,
+            "cancelled_count": 0,
+            "total_observations": 5,
+            "total_delay_minutes": 0,
         },
         (today - timedelta(days=10)).isoformat(): {
-            "on_time_count": 1, "delayed_count": 9, "cancelled_count": 0,
-            "total_observations": 10, "total_delay_minutes": 90,
+            "on_time_count": 1,
+            "delayed_count": 9,
+            "cancelled_count": 0,
+            "total_observations": 10,
+            "total_delay_minutes": 90,
         },
     }
 
@@ -215,8 +256,16 @@ def test_get_best_and_worst_days():
     bad_day = (today - timedelta(days=2)).isoformat()
 
     store._data = {
-        good_day: {"on_time_pct": 95.0, "avg_delay_minutes": 2.0, "total_observations": 10},
-        bad_day: {"on_time_pct": 30.0, "avg_delay_minutes": 15.0, "total_observations": 10},
+        good_day: {
+            "on_time_pct": 95.0,
+            "avg_delay_minutes": 2.0,
+            "total_observations": 10,
+        },
+        bad_day: {
+            "on_time_pct": 30.0,
+            "avg_delay_minutes": 15.0,
+            "total_observations": 10,
+        },
     }
 
     with patch("custom_components.cfl_commute.statistics.dt_util") as mock_dt:
@@ -248,7 +297,9 @@ async def test_on_time_pct_computed_correctly():
 
     with patch("custom_components.cfl_commute.statistics.dt_util") as mock_dt:
         mock_dt.now.return_value.date.return_value = date.fromisoformat(today)
-        await store.async_record_observation(_parsed_data(on_time=3, delayed=1, cancelled=0))
+        await store.async_record_observation(
+            _parsed_data(on_time=3, delayed=1, cancelled=0)
+        )
 
     day = store._data[today]
     assert day["on_time_pct"] == 75.0  # 3/4 * 100
@@ -277,7 +328,9 @@ def test_get_daily_breakdown_returns_30_days():
     today = date.today()
     store._data = {
         (today - timedelta(days=1)).isoformat(): {
-            "on_time_pct": 100.0, "avg_delay_minutes": 0.0, "total_observations": 5,
+            "on_time_pct": 100.0,
+            "avg_delay_minutes": 0.0,
+            "total_observations": 5,
         }
     }
 
