@@ -31,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Get station info
     origin = entry.data[CONF_ORIGIN]
-    destination = entry.data[CONF_DESTINATION]
+    destination = entry.data.get(CONF_DESTINATION, {})
 
     # Create coordinator
     # Merge entry.data with entry.options (options override data)
