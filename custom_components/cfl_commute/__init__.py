@@ -2,9 +2,12 @@
 
 import logging
 
+import voluptuous as vol
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -14,9 +17,11 @@ from .const import (
     CONF_API_KEY,
     CONF_ORIGIN,
     CONF_DESTINATION,
+    SERVICE_GET_HISTORICAL_RAW_DATA,
 )
 from .api import CFLCommuteClient
 from .coordinator import CFLCommuteDataUpdateCoordinator
+from .statistics import CFLCommuteStatisticsStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +51,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config=config,
     )
 
+    # Set up historical statistics store
+    stats_store = CFLCommuteStatisticsStore(hass, entry.entry_id)
+    await stats_store.async_load()
+    coordinator.stats_store = stats_store
+
     # Fetch initial data
     await coordinator.async_config_entry_first_refresh()
 
@@ -62,6 +72,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register update listener for options changes
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
+    # Register domain-wide service (only once across all entries)
+    if not hass.services.has_service(DOMAIN, SERVICE_GET_HISTORICAL_RAW_DATA):
+        async def _handle_get_historical_raw_data(call: ServiceCall) -> dict:
+            entry_id = call.data["entry_id"]
+            if entry_id not in hass.data.get(DOMAIN, {}):
+                raise ServiceValidationError(
+                    f"No commute found with entry_id: {entry_id}"
+                )
+            entry_data = hass.data[DOMAIN][entry_id]
+            coordinator = entry_data["coordinator"]
+            return {"days": coordinator.stats_store.get_raw_data()}
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_HISTORICAL_RAW_DATA,
+            _handle_get_historical_raw_data,
+            schema=vol.Schema({vol.Required("entry_id"): cv.string}),
+            supports_response=SupportsResponse.ONLY,
+        )
+
     return True
 
 
@@ -71,6 +101,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
+
+    # Remove domain-wide service when the last entry is unloaded
+    if unload_ok and not hass.data[DOMAIN]:
+        hass.services.async_remove(DOMAIN, SERVICE_GET_HISTORICAL_RAW_DATA)
 
     return unload_ok
 
