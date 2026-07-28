@@ -130,6 +130,50 @@ Each configured commute creates multiple sensors
   - `max_delay_minutes`: Maximum delay in minutes
   - `disruption_reasons`: List of reasons for disruptions
 
+### 6. Historical Reliability Sensor
+
+- **Entity ID**: `sensor.{commute_name}_historical_reliability`
+- **State**: On-time percentage over the last 7 days
+- **Unit**: `%`
+- **Icon**: `mdi:chart-line`
+- **Attributes**:
+  - `on_time_pct_today`: Today's on-time percentage
+  - `on_time_pct_7day`: Rolling 7-day on-time percentage
+  - `on_time_pct_30day`: Rolling 30-day on-time percentage
+  - `on_time_count_today`: Today's on-time observations
+  - `delayed_count_today`: Today's delayed observations
+  - `cancelled_count_today`: Today's cancelled observations
+  - `total_observations_today`: Total data points recorded today
+  - `days_with_data_7day`: Days with recorded data in the 7-day window
+  - `days_with_data_30day`: Days with recorded data in the 30-day window
+  - `daily_breakdown`: Per-day statistics for the last 30 days
+- **Use Case**: Track your route's reliability over time and spot long-term trends
+
+### 7. Historical Delays Sensor
+
+- **Entity ID**: `sensor.{commute_name}_historical_delays`
+- **State**: Average delay in minutes over the last 7 days
+- **Unit**: `min`
+- **Icon**: `mdi:clock-alert-outline`
+- **Attributes**:
+  - `avg_delay_today`: Average delay in minutes today
+  - `avg_delay_7day`: Rolling 7-day average delay
+  - `worst_day`: Date and stats for the worst day in the last 30 days (e.g., `{"date": "2026-07-15", "on_time_pct": 0.0, "avg_delay_minutes": 25.0, "total_observations": 4}`)
+  - `best_day`: Date and stats for the best day in the last 30 days
+  - `days_with_data_7day`: Days with recorded data in the 7-day window
+- **Use Case**: Understand whether your route is getting better or worse, and identify your worst days
+
+### Summary Sensor Historical Attributes
+
+The Summary sensor (`sensor.{commute_name}_summary`) also includes historical statistics directly in its attributes for convenience:
+
+- `on_time_pct_today` / `on_time_pct_7day` / `on_time_pct_30day`: On-time percentages
+- `avg_delay_7day`: Rolling 7-day average delay
+- `worst_day` / `best_day`: Best and worst days in the last 30 days
+- `reverse_on_time_pct_today` / `reverse_on_time_pct_7day` / `reverse_on_time_pct_30day`: On-time percentages for the reverse route (if configured)
+- `reverse_avg_delay_7day`: Rolling 7-day average delay for the reverse route
+- `reverse_worst_day` / `reverse_best_day`: Best and worst days for the reverse route
+
 ## Update Intervals
 
 The integration automatically adjusts update frequency based on time of day:
@@ -207,8 +251,8 @@ automation:
 3. Verify the `custom_components/cfl_commute` directory exists
 
 ### Authentication Errors
-- Double-check your API key is correct
 - Ensure you have a valid API key from opendata-api@atp.etat.lu
+- Double-check your API key is correct
 
 ### No Data Showing
 - Check if trains actually run on your route at this time
@@ -220,6 +264,9 @@ automation:
 - If during night hours, ensure "Enable Night-Time Updates" is on
 - Verify network connectivity
 
-## Companion Card
+## Companion Cards
 
-For a richer visual dashboard experience, install the [CFL Commute Card](https://github.com/ogerardin/lovelace-cfl-commute-card) Lovelace card.
+The sensors exposed by this integration are compatible with the following Lovelace cards:
+
+- **[CFL Commute Card](https://github.com/ogerardin/lovelace-cfl-commute-card)** — dedicated card with a CFL-inspired train departure board display
+- **[My Rail Commute Card](https://github.com/adamf83/lovelace-my-rail-commute-card)** — original card from the UK my-rail-commute project, fully compatible with CFL Commute data, offering additional display modes and configurations

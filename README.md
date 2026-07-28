@@ -10,6 +10,7 @@ Monitor trains, get disruption alerts, and automate your commuting routine.
 - **Real-time Train Tracking**: Monitor upcoming trains between any two Luxembourg stations
 - **Smart Update Intervals**: Automatically adjusts polling frequency based on time of day (peak/off-peak/night)
 - **Disruption Detection**: Binary sensor that alerts on cancellations or significant delays
+- **Historical Performance Tracking**: Persistent daily statistics with rolling 7-day and 30-day on-time percentages and average delays
 - **Rich Sensor Data**: Comprehensive attributes including platforms, delays, calling points, and more
 - **Multi-Route Support**: Configure multiple commutes (e.g., morning and evening journeys)
 - **UI Configuration**: Easy setup through Home Assistant's config flow interface
