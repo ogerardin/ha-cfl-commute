@@ -10,6 +10,18 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .api import Departure
 from .util import format_time
 from .const import (
+    ATTR_AVG_DELAY_7D,
+    ATTR_AVG_DELAY_TODAY,
+    ATTR_BEST_DAY,
+    ATTR_CANCELLED_COUNT_TODAY,
+    ATTR_DAILY_BREAKDOWN,
+    ATTR_DELAYED_COUNT_TODAY,
+    ATTR_ON_TIME_COUNT_TODAY,
+    ATTR_ON_TIME_PCT_30D,
+    ATTR_ON_TIME_PCT_7D,
+    ATTR_ON_TIME_PCT_TODAY,
+    ATTR_TOTAL_OBSERVATIONS_TODAY,
+    ATTR_WORST_DAY,
     CONF_COMMUTE_NAME,
     CONF_DESTINATION,
     CONF_MAJOR_THRESHOLD,
@@ -101,6 +113,17 @@ async def async_setup_entry(
                 train_number=i,
             )
         )
+
+    sensors.append(
+        CFLCommuteHistoricalReliabilitySensor(
+            coordinator=coordinator, commute_name=commute_name
+        )
+    )
+    sensors.append(
+        CFLCommuteHistoricalDelaysSensor(
+            coordinator=coordinator, commute_name=commute_name
+        )
+    )
 
     async_add_entities(sensors)
 
@@ -427,3 +450,104 @@ class CFLCommuteTrainSensor(CFLCommuteBaseSensor):
             )
 
         return attrs
+
+
+class CFLCommuteHistoricalReliabilitySensor(CoordinatorEntity, SensorEntity):
+    """Sensor exposing on-time percentage over rolling windows."""
+
+    def __init__(self, coordinator, commute_name):
+        super().__init__(coordinator)
+        self._commute_name = commute_name
+
+    @property
+    def name(self) -> str:
+        return f"{self._commute_name} Historical Reliability"
+
+    @property
+    def unique_id(self) -> str:
+        return f"{self._commute_name}_historical_reliability"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:chart-line"
+
+    @property
+    def unit_of_measurement(self) -> str:
+        return "%"
+
+    @property
+    def state(self):
+        if self.coordinator.stats_store is None:
+            return None
+        return self.coordinator.stats_store.get_rolling_stats(7)["on_time_pct"]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        store = self.coordinator.stats_store
+        if store is None:
+            return {}
+
+        today = store.get_today_stats()
+        rolling_7 = store.get_rolling_stats(7)
+        rolling_30 = store.get_rolling_stats(30)
+
+        return {
+            ATTR_ON_TIME_PCT_TODAY: today.get("on_time_pct"),
+            ATTR_ON_TIME_PCT_7D: rolling_7["on_time_pct"],
+            ATTR_ON_TIME_PCT_30D: rolling_30["on_time_pct"],
+            ATTR_ON_TIME_COUNT_TODAY: today.get("on_time_count", 0),
+            ATTR_DELAYED_COUNT_TODAY: today.get("delayed_count", 0),
+            ATTR_CANCELLED_COUNT_TODAY: today.get("cancelled_count", 0),
+            ATTR_TOTAL_OBSERVATIONS_TODAY: today.get("total_observations", 0),
+            "days_with_data_7day": rolling_7["days_with_data"],
+            "days_with_data_30day": rolling_30["days_with_data"],
+            ATTR_DAILY_BREAKDOWN: store.get_daily_breakdown(30),
+        }
+
+
+class CFLCommuteHistoricalDelaysSensor(CoordinatorEntity, SensorEntity):
+    """Sensor exposing average delay statistics over rolling windows."""
+
+    def __init__(self, coordinator, commute_name):
+        super().__init__(coordinator)
+        self._commute_name = commute_name
+
+    @property
+    def name(self) -> str:
+        return f"{self._commute_name} Historical Delays"
+
+    @property
+    def unique_id(self) -> str:
+        return f"{self._commute_name}_historical_delays"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:clock-alert-outline"
+
+    @property
+    def unit_of_measurement(self) -> str:
+        return "min"
+
+    @property
+    def state(self):
+        if self.coordinator.stats_store is None:
+            return None
+        return self.coordinator.stats_store.get_rolling_stats(7)["avg_delay_minutes"]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        store = self.coordinator.stats_store
+        if store is None:
+            return {}
+
+        today = store.get_today_stats()
+        rolling_7 = store.get_rolling_stats(7)
+        best_worst = store.get_best_and_worst_days(30)
+
+        return {
+            ATTR_AVG_DELAY_TODAY: today.get("avg_delay_minutes"),
+            ATTR_AVG_DELAY_7D: rolling_7["avg_delay_minutes"],
+            ATTR_WORST_DAY: best_worst["worst_day"],
+            ATTR_BEST_DAY: best_worst["best_day"],
+            "days_with_data_7day": rolling_7["days_with_data"],
+        }
