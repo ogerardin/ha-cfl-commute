@@ -9,6 +9,8 @@ import pytest
 
 from custom_components.cfl_commute.statistics import CFLCommuteStatisticsStore
 
+TODAY = date.today()
+
 
 def _make_store(load_return=None):
     """Return a CFLCommuteStatisticsStore with a mocked HA Store."""
@@ -62,9 +64,10 @@ async def test_load_no_data():
 @pytest.mark.asyncio
 async def test_load_existing_data():
     """async_load restores previously persisted data."""
+    recent = (TODAY - timedelta(days=1)).isoformat()
     existing = {
         "days": {
-            "2026-05-17": {
+            recent: {
                 "on_time_count": 5,
                 "delayed_count": 1,
                 "cancelled_count": 0,
@@ -77,8 +80,8 @@ async def test_load_existing_data():
     }
     store = _make_store(load_return=existing)
     await store.async_load()
-    assert "2026-05-17" in store._data
-    assert store._data["2026-05-17"]["on_time_count"] == 5
+    assert recent in store._data
+    assert store._data[recent]["on_time_count"] == 5
 
 
 @pytest.mark.asyncio
@@ -108,7 +111,7 @@ async def test_record_same_day_accumulates():
     """Multiple observations on the same day accumulate counts."""
     store = _make_store()
     await store.async_load()
-    today = "2026-05-17"
+    today = TODAY.isoformat()
 
     with patch("custom_components.cfl_commute.statistics.dt_util") as mock_dt:
         mock_dt.now.return_value.date.return_value = date.fromisoformat(today)
@@ -131,7 +134,7 @@ async def test_record_zero_services_skipped():
     """Observations with zero services_tracked are silently skipped."""
     store = _make_store()
     await store.async_load()
-    today = "2026-05-17"
+    today = TODAY.isoformat()
 
     with patch("custom_components.cfl_commute.statistics.dt_util") as mock_dt:
         mock_dt.now.return_value.date.return_value = date.fromisoformat(today)
@@ -293,7 +296,7 @@ async def test_on_time_pct_computed_correctly():
     """on_time_pct is stored and computed correctly after recording."""
     store = _make_store()
     await store.async_load()
-    today = "2026-05-17"
+    today = TODAY.isoformat()
 
     with patch("custom_components.cfl_commute.statistics.dt_util") as mock_dt:
         mock_dt.now.return_value.date.return_value = date.fromisoformat(today)
@@ -309,11 +312,13 @@ async def test_on_time_pct_computed_correctly():
 def test_get_raw_data_returns_copy():
     """get_raw_data returns all stored daily records as a copy."""
     store = _make_store()
-    store._data = {"2026-05-17": {"on_time_count": 5}}
+    day = TODAY.isoformat()
+    other_day = (TODAY + timedelta(days=1)).isoformat()
+    store._data = {day: {"on_time_count": 5}}
     result = store.get_raw_data()
-    assert result == {"2026-05-17": {"on_time_count": 5}}
-    result["2026-05-18"] = {}
-    assert "2026-05-18" not in store._data
+    assert result == {day: {"on_time_count": 5}}
+    result[other_day] = {}
+    assert other_day not in store._data
 
 
 def test_get_raw_data_empty():
