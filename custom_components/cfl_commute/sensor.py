@@ -60,17 +60,18 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the CFL Commute sensors."""
-    # Get coordinator from hass.data
+    # Get coordinator and effective config (options override data) from hass.data
     entry_data = hass.data[DOMAIN][config_entry.entry_id]
     coordinator = entry_data["coordinator"]
+    config = entry_data["config"]
 
-    commute_name = config_entry.data.get(CONF_COMMUTE_NAME, "cfl_commute")
-    origin = config_entry.data.get(CONF_ORIGIN, {})
-    destination = config_entry.data.get(CONF_DESTINATION, {})
-    num_trains = config_entry.data.get(CONF_NUM_TRAINS, DEFAULT_NUM_TRAINS)
-    minor_threshold = config_entry.data.get(CONF_MINOR_THRESHOLD, 3)
-    major_threshold = config_entry.data.get(CONF_MAJOR_THRESHOLD, 10)
-    severe_threshold = config_entry.data.get(CONF_SEVERE_THRESHOLD, 15)
+    commute_name = config.get(CONF_COMMUTE_NAME, "cfl_commute")
+    origin = config.get(CONF_ORIGIN, {})
+    destination = config.get(CONF_DESTINATION, {})
+    num_trains = config.get(CONF_NUM_TRAINS, DEFAULT_NUM_TRAINS)
+    minor_threshold = config.get(CONF_MINOR_THRESHOLD, 3)
+    major_threshold = config.get(CONF_MAJOR_THRESHOLD, 10)
+    severe_threshold = config.get(CONF_SEVERE_THRESHOLD, 15)
 
     sensors = [
         CFLCommuteSummarySensor(
