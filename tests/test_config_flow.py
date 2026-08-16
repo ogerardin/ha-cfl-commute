@@ -116,7 +116,7 @@ class TestReturnJourneyFeature:
         hass = MagicMock()
         hass.config_entries = MagicMock()
         hass.config_entries.flow = MagicMock()
-        hass.config_entries.flow.async_init = AsyncMock(return_value=MagicMock())
+        hass.config_entries.flow.async_init = MagicMock(return_value=MagicMock())
         return hass
 
     def _create_flow_with_stations(self):

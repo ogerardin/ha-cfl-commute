@@ -35,15 +35,15 @@ jobs:
           pytest --cov --cov-report=xml --cov-report=term --ignore=tests/test_setup_flow.py
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         if: matrix.python-version == '3.13'
         with:
-          file: ./coverage.xml
+          files: coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always() && matrix.python-version == '3.13'
         with:
           name: coverage-report

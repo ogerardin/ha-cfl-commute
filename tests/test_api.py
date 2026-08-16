@@ -227,8 +227,12 @@ class TestCFLCommuteClient:
 
         with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
-            # Use large time_window to include test times regardless of current time
-            departures = await client.get_departures("200426002", time_window=1440)
+            # Use large time_window and fixed "now" so mock times are always in-window
+            with patch(
+                "custom_components.cfl_commute.api._get_luxembourg_now",
+                return_value=datetime(2026, 1, 1, 22, 0),
+            ):
+                departures = await client.get_departures("200426002", time_window=1440)
 
         # Both RB (train) and Bus should be included
         assert len(departures) == 2
