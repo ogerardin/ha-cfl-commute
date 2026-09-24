@@ -138,17 +138,14 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
-    async def _search_stations(
-        self, query: str
-    ) -> list[selector.SelectOptionDict]:
+    async def _search_stations(self, query: str) -> list[selector.SelectOptionDict]:
         """Search for stations and return formatted results."""
         if not self._client:
             return []
         try:
             stations = await self._client.search_stations(query)
             return [
-                selector.SelectOptionDict(value=s.id, label=s.name)
-                for s in stations
+                selector.SelectOptionDict(value=s.id, label=s.name) for s in stations
             ]
         except Exception as e:
             _LOGGER.error(f"Station search error: {e}")
@@ -176,7 +173,11 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         s["label"].lower() == station_value.lower() for s in stations
                     ):
                         matching = next(
-                            (s for s in stations if s["label"].lower() == station_value.lower()),
+                            (
+                                s
+                                for s in stations
+                                if s["label"].lower() == station_value.lower()
+                            ),
                             stations[0],
                         )
                         self._origin_station = {
@@ -199,7 +200,9 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="origin",
-            data_schema=self._get_station_schema(self._all_stations, user_input.get("station") if user_input else None),
+            data_schema=self._get_station_schema(
+                self._all_stations, user_input.get("station") if user_input else None
+            ),
             errors=errors,
             description_placeholders={"step": "origin"},
         )
@@ -226,7 +229,11 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         s["label"].lower() == station_value.lower() for s in stations
                     ):
                         matching = next(
-                            (s for s in stations if s["label"].lower() == station_value.lower()),
+                            (
+                                s
+                                for s in stations
+                                if s["label"].lower() == station_value.lower()
+                            ),
                             stations[0],
                         )
                         self._destination_station = {
@@ -249,7 +256,9 @@ class CFLCommuteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="destination",
-            data_schema=self._get_station_schema(self._all_stations, user_input.get("station") if user_input else None),
+            data_schema=self._get_station_schema(
+                self._all_stations, user_input.get("station") if user_input else None
+            ),
             errors=errors,
             description_placeholders={"step": "destination"},
         )

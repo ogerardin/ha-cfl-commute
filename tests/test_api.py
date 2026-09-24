@@ -5,6 +5,7 @@ import aiohttp
 from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
 from custom_components.cfl_commute.api import (
+    CFLAPIError,
     CFLCommuteClient,
     Departure,
     _clean_station_name,
@@ -425,3 +426,25 @@ class TestFormatTime:
     def test_format_time_invalid(self):
         """Test formatting invalid time string."""
         assert format_time("invalid") == "inval"
+
+
+class TestResponseValidation:
+    """Test that malformed API responses raise CFLAPIError instead of AttributeError."""
+
+    @pytest.mark.asyncio
+    async def test_get_departures_rejects_non_dict_response(self):
+        """A non-dict top-level response should raise CFLAPIError."""
+        client = CFLCommuteClient("test_api_key")
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = ["unexpected", "list"]
+            with pytest.raises(CFLAPIError):
+                await client.get_departures("110109004")
+
+    @pytest.mark.asyncio
+    async def test_search_stations_rejects_non_dict_response(self):
+        """search_stations should raise CFLAPIError on non-dict response."""
+        client = CFLCommuteClient("test_api_key")
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = ["unexpected", "list"]
+            with pytest.raises(CFLAPIError):
+                await client.search_stations("Luxembourg")

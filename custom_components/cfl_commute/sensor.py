@@ -1,5 +1,6 @@
 """Sensor entities for CFL Commute."""
 
+import json
 from typing import Any
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
@@ -235,28 +236,31 @@ class CFLCommuteSummarySensor(CFLCommuteBaseSensor):
         )
         cancelled = sum(1 for d in self.departures if d.is_cancelled)
 
+        all_trains = [
+            {
+                "train_number": i + 1,
+                "service_id": d.train_number,
+                "departure_time": format_time(d.expected_departure),
+                "scheduled_departure": format_time(d.scheduled_departure),
+                "expected_departure": format_time(d.expected_departure),
+                "delay_minutes": d.delay_minutes,
+                "is_cancelled": d.is_cancelled,
+                "platform": d.platform,
+                "direction": d.direction,
+                "operator": d.operator,
+                "calling_points": d.calling_points,
+            }
+            for i, d in enumerate(self.departures)
+        ]
+
         attrs.update(
             {
                 "on_time_count": on_time,
                 "delayed_count": delayed,
                 "cancelled_count": cancelled,
                 "total_trains": len(self.departures),
-                "all_trains": [
-                    {
-                        "train_number": i + 1,
-                        "service_id": d.train_number,
-                        "departure_time": format_time(d.expected_departure),
-                        "scheduled_departure": format_time(d.scheduled_departure),
-                        "expected_departure": format_time(d.expected_departure),
-                        "delay_minutes": d.delay_minutes,
-                        "is_cancelled": d.is_cancelled,
-                        "platform": d.platform,
-                        "direction": d.direction,
-                        "operator": d.operator,
-                        "calling_points": d.calling_points,
-                    }
-                    for i, d in enumerate(self.departures)
-                ],
+                "all_trains": all_trains,
+                "all_trains_json": json.dumps(all_trains, default=str),
             }
         )
 

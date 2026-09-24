@@ -1,5 +1,6 @@
 """Tests for sensor logic."""
 
+import json
 from unittest.mock import MagicMock
 
 from custom_components.cfl_commute.api import Departure
@@ -26,7 +27,10 @@ def _make_coordinator(departures: list[Departure]):
 
 def _make_origin_destination():
     """Return default origin/destination dicts."""
-    return {"id": "200405060", "name": "Luxembourg"}, {"id": "200417025", "name": "Esch-sur-Alzette"}
+    return {"id": "200405060", "name": "Luxembourg"}, {
+        "id": "200417025",
+        "name": "Esch-sur-Alzette",
+    }
 
 
 def _make_departure(
@@ -339,6 +343,32 @@ class TestSummaryAllTrainsTrainNumber:
         )
         all_trains = sensor.extra_state_attributes["all_trains"]
         assert isinstance(all_trains[0]["train_number"], int)
+
+
+class TestSummaryAllTrainsJson:
+    """Test that all_trains_json is a JSON string matching all_trains."""
+
+    def test_all_trains_json_matches_all_trains(self):
+        """all_trains_json should parse back to the same data as all_trains."""
+        origin, destination = _make_origin_destination()
+        deps = [
+            _make_departure(train_number="RE 4632"),
+            _make_departure(train_number="RB 5101"),
+        ]
+        coordinator = _make_coordinator(deps)
+        sensor = CFLCommuteSummarySensor(
+            coordinator=coordinator,
+            commute_name="test",
+            origin=origin,
+            destination=destination,
+            num_trains=3,
+            minor_threshold=3,
+            major_threshold=10,
+            severe_threshold=15,
+        )
+        attrs = sensor.extra_state_attributes
+        parsed = json.loads(attrs["all_trains_json"])
+        assert parsed == attrs["all_trains"]
 
 
 class TestNextTrainTrainNumber:

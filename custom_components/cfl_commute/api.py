@@ -6,7 +6,6 @@ import re
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 from zoneinfo import ZoneInfo
 import aiohttp
 
@@ -88,6 +87,18 @@ def _clean_station_name(name: str) -> str:
     which is redundant since all entries are train stations.
     """
     return re.sub(r",\s*Gare\b.*$", "", name, flags=re.IGNORECASE).strip()
+
+
+def _extract_departure_list(data) -> list:
+    """Validate departure board response and return the Departure list."""
+    if not isinstance(data, dict):
+        raise CFLAPIError(
+            f"Unexpected departure board response type: {type(data).__name__}"
+        )
+    departure_list = data.get("Departure", [])
+    if isinstance(departure_list, dict):
+        departure_list = [departure_list]
+    return departure_list
 
 
 class CFLCommuteClient:
@@ -253,9 +264,7 @@ class CFLCommuteClient:
 
         stations_map: dict[str, Station] = {}
 
-        departures = data.get("Departure", [])
-        if isinstance(departures, dict):
-            departures = [departures]
+        departures = _extract_departure_list(data)
 
         for dep in departures:
             stops = dep.get("Stops", {}).get("Stop", [])
@@ -320,10 +329,7 @@ class CFLCommuteClient:
         data = await self._request(url, params)
 
         departures = []
-        departure_list = data.get("Departure", [])
-
-        if isinstance(departure_list, dict):
-            departure_list = [departure_list]
+        departure_list = _extract_departure_list(data)
 
         for dep in departure_list:
             # Handle different response formats
