@@ -289,3 +289,48 @@ To make a release:
    ```bash
    gh release create 1.3.2 --title "Release 1.3.2" --notes "Changes in this release..." cfl_commute.zip
    ```
+
+---
+
+## 8. Upstream Sync
+
+This repo is a fork of `adamf83/my-rail-commute` (`upstream`), rebranded for CFL /
+mobiliteit.lu. Upstream targets UK National Rail via the Rail Data Marketplace API.
+
+### Comparing against upstream
+
+**Do not rely on git ancestry.** The fork's history was rewritten into a fresh root
+(`d917574`, Mar 2026), so `git merge-base main upstream/main` fails. `main` and
+`upstream/main` share no commits even though this fork descends from upstream.
+
+Compare **content-wise**: read the fork's current code and decide whether each upstream
+change matters here. The fork absorbs applicable upstream work as manual ports — fork
+commit messages mirror upstream PRs (e.g. `469065b` ≈ upstream #168, `5469f76` ≈ #178).
+
+Re-check upstream without touching the working tree:
+
+```bash
+gh api "repos/adamf83/my-rail-commute/commits?per_page=50&since=<date>" --paginate \
+  --jq '.[] | .sha[0:7] + " " + (.commit.committer.date|split("T")[0]) + " " + (.commit.message|split("\n")[0])'
+```
+
+### Last reviewed: 2026-10-13 — nothing worth porting
+
+Fork absorbed upstream through **v1.1.7** (2026-09-23). Upstream was at **v1.1.8**
+(2026-10-11). Verdicts for everything new upstream since then:
+
+| Upstream change | Verdict |
+|---|---|
+| #178 remove aiohttp from manifest | Already ported (`5469f76`) |
+| #179 config_flow: flag invalid station code | N/A — name-dropdown search with per-step `no_results`, no free-text CRS codes |
+| #190 fix service ordering across midnight | N/A — fork never sorts; HAFAS boards are chronological from "now" (no Darwin 2h look-back). Fork already wraps midnight in `_filter_by_time_window` (api.py) and delay calc |
+| #188 name API product/endpoint in error logs | N/A — upstream has several API products, fork has one |
+| #166 strip whitespace on disruption reasons | N/A — HAFAS supplies no reason strings; fork builds them from direction/delay |
+| #167 jitter on rate-limit throttle | N/A — fork's limiter has no throttle delay (warn + raise) |
+| Delay Repay block (#170–#191, #210) | Not ported — UK compensation-claim feature. CFL has its own ≥60min compensation; a port is a major build, not a sync |
+| Blueprints (#198, #205, #206, #208) | Not adopted — optional feature, would need entity renames |
+| Raw debug services (#211, #212) | Not adopted — optional; `get_historical_raw_data` already covers most debugging |
+| Docs (#194, #196, #197, #207) | N/A — repo-specific |
+
+Only revisit the last three rows if the CFL integration grows claim tracking, ships
+blueprints, or needs raw-response debugging.
